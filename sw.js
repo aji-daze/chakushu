@@ -1,4 +1,4 @@
-const CACHE = "chakushu-v2";
+const CACHE = "contodo-v3";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -17,11 +17,11 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
 
-  // ページ本体: ネット優先（更新を反映）、つながらなければ保存版
+  // ページ本体: ブラウザの一時保存を使わずネットから取得（更新をすぐ反映）、つながらなければ保存版
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
-        .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); return res; })
+      fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
+        .then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); } return res; })
         .catch(() => caches.match("./index.html"))
     );
     return;

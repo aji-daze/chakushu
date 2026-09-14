@@ -1,7 +1,7 @@
 {
-  "name": "着手帳",
-  "short_name": "着手帳",
-  "description": "やる気を待たずに一歩目から始める、ポモドーロと小さな一歩のノート。",
+  "name": "ConTodo",
+  "short_name": "ConTodo",
+  "description": "やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み。",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
