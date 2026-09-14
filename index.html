@@ -5,8 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>着手帳</title>
 <meta name="description" content="やる気を待たずに一歩目から始める、ポモドーロと小さな一歩のノート。">
-<meta name="theme-color" content="#F5F6F5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111314" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F6F5" id="meta-theme">
+<script>
+(function(){
+  var t="auto";
+  try{ var s=JSON.parse(localStorage.getItem("chakushu.v1")); if(s&&s.settings&&s.settings.theme) t=s.settings.theme; }catch(e){}
+  if(t==="light"||t==="dark") document.documentElement.setAttribute("data-theme",t);
+  var dark=t==="dark"||(t==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);
+  document.getElementById("meta-theme").setAttribute("content",dark?"#111314":"#F5F6F5");
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -19,7 +27,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Shippori+Mincho:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
 <style>
 :root{
-  color-scheme:light dark;
+  color-scheme:light;
   --bg:#F5F6F5; --surface:#FFFFFF; --line:#E3E6E4; --ink:#1D2120; --ink-2:#6B716E; --ink-3:#A2A7A4;
   --accent:#2F4B6E; --accent-soft:#E7EDF4; --rest:#557F6A; --rest-soft:#E4EEE8; --danger:#A5473A;
   --backdrop:rgba(20,24,26,.32);
@@ -29,12 +37,22 @@
   --tabbar:64px;
 }
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
     --bg:#111314; --surface:#1A1D1E; --line:#2A2E30; --ink:#E5E7E6; --ink-2:#9AA09D; --ink-3:#62686A;
     --accent:#A3B9D6; --accent-soft:#1F2833; --rest:#8EC0A5; --rest-soft:#1B2A23; --danger:#E28C7D;
     --backdrop:rgba(0,0,0,.55);
   }
 }
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111314; --surface:#1A1D1E; --line:#2A2E30; --ink:#E5E7E6; --ink-2:#9AA09D; --ink-3:#62686A;
+  --accent:#A3B9D6; --accent-soft:#1F2833; --rest:#8EC0A5; --rest-soft:#1B2A23; --danger:#E28C7D;
+  --backdrop:rgba(0,0,0,.55);
+}
+.seg{display:inline-grid; grid-auto-flow:column; border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; flex:none}
+.seg button{font-size:13px; color:var(--ink-2); border-radius:999px; padding:6px 12px; min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.7;
@@ -264,6 +282,11 @@ dialog::backdrop{background:var(--backdrop)}
 <dialog id="d-settings" aria-labelledby="set-t">
   <div class="grab"></div>
   <p class="sheet-title" id="set-t">設定</p>
+  <p class="group-label">表示</p>
+  <div class="set"><div class="set-l"><span>テーマ</span><small>「自動」は端末の設定に合わせます</small></div>
+    <div class="seg" role="group" aria-label="テーマ">
+      <button data-act="theme" data-v="auto">自動</button><button data-act="theme" data-v="light">ライト</button><button data-act="theme" data-v="dark">ダーク</button>
+    </div></div>
   <p class="group-label">ポモドーロ</p>
   <div id="set-nums"></div>
   <p class="group-label">進め方</p>
@@ -291,7 +314,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const pad=n=>String(n).padStart(2,"0");
 const dayKey=t=>{const d=new Date(t);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
 const DAY=86400000;
-const DEFAULTS={focus:25,short:5,long:15,every:4,autoBreak:true,autoFocus:false,vibrate:true,sound:true,wake:false};
+const DEFAULTS={focus:25,short:5,long:15,every:4,autoBreak:true,autoFocus:false,vibrate:true,sound:true,wake:false,theme:"auto"};
 const PHASE_LABEL={focus:"集中",short:"小休憩",long:"長い休憩",quick:"5分だけ"};
 const VIB={start:[18], focusEnd:[260,120,260,120,520], breakEnd:[140,90,140], tap:[10]};
 const $=id=>document.getElementById(id);
@@ -540,8 +563,17 @@ function renderSettings(){
   $("set-nums").innerHTML=NUMS.map(([k,l,u])=>`<div class="set"><div class="set-l"><span>${l}</span></div>
     <div class="stepper"><button data-act="num" data-k="${k}" data-d="-1" aria-label="${l}を減らす">−</button><output class="mono" id="o-${k}">${S()[k]}${u}</output><button data-act="num" data-k="${k}" data-d="1" aria-label="${l}を増やす">＋</button></div></div>`).join("");
   ["autoBreak","autoFocus","vibrate","sound","wake"].forEach(k=>{ $("s-"+k).checked=!!S()[k]; });
+  document.querySelectorAll('[data-act="theme"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S().theme)));
   if(!("vibrate" in navigator)) $("vib-note").textContent="この端末は振動に対応していません（iPhoneは非対応）";
 }
+const darkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
+function applyTheme(){
+  const t=S().theme, root=document.documentElement;
+  if(t==="light"||t==="dark") root.setAttribute("data-theme",t); else root.removeAttribute("data-theme");
+  const dark=t==="dark"||(t==="auto"&&darkMQ&&darkMQ.matches);
+  $("meta-theme").setAttribute("content",dark?"#111314":"#F5F6F5");
+}
+if(darkMQ&&darkMQ.addEventListener) darkMQ.addEventListener("change",applyTheme);
 function applyIdleDuration(){ if(!started()){ const m=phaseMin(timer.phase); timer.total=timer.left=m*60; saveTimer(); renderTimerView(); } }
 function renderAll(){ renderTimerView(); renderTasks(); if(view==="log") renderLog(); }
 
@@ -562,7 +594,7 @@ $("import-file").addEventListener("change",async e=>{
     const d=JSON.parse(await f.text());
     if(!d||d.v!==1||!Array.isArray(d.tasks)||!Array.isArray(d.sessions)) throw 0;
     d.parking=Array.isArray(d.parking)?d.parking:[];
-    state=d; state.settings={...DEFAULTS,...(state.settings||{})}; save(); rowsInit=false; openRows.clear();
+    state=d; state.settings={...DEFAULTS,...(state.settings||{})}; save(); applyTheme(); rowsInit=false; openRows.clear();
     renderSettings(); renderAll(); toast("バックアップから戻しました。");
   }catch(err){ $("import-note").textContent="読み込めませんでした。着手帳で書き出したファイルを選んでください。"; }
 });
@@ -611,6 +643,7 @@ document.addEventListener("click",e=>{
       let ok=false; try{ ok=navigator.vibrate(VIB.focusEnd); }catch(err){}
       note.textContent=ok?"振動しましたか？ しない場合は、マナーモードや省電力の設定を確認してください。":"振動できませんでした。端末の設定を確認してください。";
       break; }
+    case "theme": S().theme=b.dataset.v; save(); applyTheme(); renderSettings(); break;
     case "export": exportData(); break;
     case "import": $("import-file").click(); break;
   }
