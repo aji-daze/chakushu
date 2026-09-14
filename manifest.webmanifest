@@ -1,0 +1,17 @@
+{
+  "name": "着手帳",
+  "short_name": "着手帳",
+  "description": "やる気を待たずに一歩目から始める、ポモドーロと小さな一歩のノート。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F6F5",
+  "theme_color": "#F5F6F5",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
