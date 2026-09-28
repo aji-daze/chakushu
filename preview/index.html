@@ -10,9 +10,6 @@
 <script>
 (function(){
   var root=document.documentElement;
-  // 画面の実際の高さを使う（起動直後のサイズずれ対策）
-  function setAppH(){ root.style.setProperty("--app-h", window.innerHeight+"px"); root.classList.add("apph"); }
-  setAppH(); window.__setAppH=setAppH;
   var t="auto";
   try{ var s=JSON.parse(localStorage.getItem("chakushu.v1")); if(s&&s.settings&&s.settings.theme) t=s.settings.theme; }catch(e){}
   var C={light:"#F5F6F5",dark:"#111314",paper:"#F2EEE5",mauve:"#F3EEF3"};
@@ -79,10 +76,10 @@
 }
 *{box-sizing:border-box}
 html{height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100%; touch-action:manipulation; background:var(--bg)}
-/* アプリの骨組み：ヘッダー／中身（ここだけスクロール）／タブバー */
-body{margin:0; height:100vh; height:100dvh; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none;
+/* アプリの骨組み：ヘッダー／中身（ここだけスクロール）／タブバー。
+   高さは画面そのもの（height:100%）に合わせるので、起動直後や回転でもずれない */
+body{margin:0; height:100%; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none;
   background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.7; -webkit-tap-highlight-color:transparent}
-html.apph body{height:var(--app-h)}
 button,input,select{font:inherit; color:inherit}
 button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipulation; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
 [hidden]{display:none!important}
@@ -601,12 +598,7 @@ const JOB_COLORS=["#4A6A90","#5E8F76","#B07D48","#8A6495"];
 const $=id=>document.getElementById(id);
 const scroller=$("scroller");
 
-/* ---------- 画面サイズ ---------- */
-const setAppH=window.__setAppH||function(){};
-window.addEventListener("resize",setAppH);
-window.addEventListener("orientationchange",()=>setTimeout(setAppH,250));
-window.addEventListener("pageshow",setAppH);
-setTimeout(setAppH,300);
+/* ---------- 画面サイズ（キーボードの高さだけ測る） ---------- */
 if(window.visualViewport){
   const vv=window.visualViewport;
   const updKb=()=>{ const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop); document.documentElement.style.setProperty("--kb",(kb>80?Math.round(kb):0)+"px"); };
@@ -871,7 +863,7 @@ function rightAction(){
   setPhase("focus",false);
 }
 setInterval(()=>{ if(timer.running) tick(); },250);
-document.addEventListener("visibilitychange",()=>{ if(visible()){ setAppH(); tick(); syncWake(); clearNotifications(); } });
+document.addEventListener("visibilitychange",()=>{ if(visible()){ tick(); syncWake(); clearNotifications(); } });
 
 /* ================= tasks ================= */
 const openRows=new Set(); let armed=null, rowsInit=false;
