@@ -108,14 +108,16 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
   display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
 .step-text.muted{color:var(--ink-3); font-weight:400; font-size:16px}
 .pill{border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--ink-2); padding:6px 14px; min-height:32px}
-.ring-box{position:relative; flex:1 1 0; min-height:150px; width:100%}
-.ring{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:calc(var(--rs,240) * 1px); height:calc(var(--rs,240) * 1px)}
+/* リングは空いている枠の大きさから CSS だけで決める（スクリプトの計算を待たない） */
+.ring-box{position:relative; flex:1 1 0; min-height:150px; width:100%; container-type:size}
+.ring{--d:240px; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:var(--d); height:var(--d)}
+@supports (container-type:size){ .ring{--d:min(calc(100cqh - 4px), 80cqw, 300px)} }
 .ring svg{width:100%; height:100%; transform:rotate(-90deg); display:block}
 .ring .track{stroke:var(--line); fill:none; stroke-width:1.5}
 .ring .prog{stroke:var(--accent); fill:none; stroke-width:2.5; stroke-linecap:round; transition:stroke-dashoffset .3s linear, stroke .4s}
 .ring[data-phase="short"] .prog,.ring[data-phase="long"] .prog{stroke:var(--rest)}
 .ring .read{position:absolute; inset:0; display:grid; place-content:center; gap:6px}
-.digits{font-family:var(--f-mono); font-weight:300; font-variant-numeric:tabular-nums; font-size:calc(var(--rs,240) * .235px); line-height:1; letter-spacing:-.02em}
+.digits{font-family:var(--f-mono); font-weight:300; font-variant-numeric:tabular-nums; font-size:calc(var(--d,240px) * .235); line-height:1; letter-spacing:-.02em}
 .phase{font-family:var(--f-serif); font-size:13px; letter-spacing:.24em; color:var(--ink-2)}
 .ring[data-phase="short"] .phase,.ring[data-phase="long"] .phase{color:var(--rest)}
 .dots{display:flex; gap:10px; justify-content:center; align-items:center}
@@ -604,13 +606,16 @@ if(window.visualViewport){
   const updKb=()=>{ const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop); document.documentElement.style.setProperty("--kb",(kb>80?Math.round(kb):0)+"px"); };
   vv.addEventListener("resize",updKb); vv.addEventListener("scroll",updKb);
 }
+// 古いブラウザ（container query 非対応）だけ、スクリプトでリングの大きさを合わせる
+const cqOK=window.CSS&&CSS.supports&&CSS.supports("container-type","size");
 function fitRing(){
+  if(cqOK) return;
   const box=$("ring-box"); if(!box||!box.offsetParent) return;
   const r=box.getBoundingClientRect();
   const size=Math.max(110,Math.floor(Math.min(r.height-4,r.width*.8,300)));
-  $("ring").style.setProperty("--rs",size);
+  $("ring").style.setProperty("--d",size+"px");
 }
-if(window.ResizeObserver) new ResizeObserver(fitRing).observe($("ring-box")); else window.addEventListener("resize",fitRing);
+if(!cqOK){ if(window.ResizeObserver) new ResizeObserver(fitRing).observe($("ring-box")); else window.addEventListener("resize",fitRing); }
 
 /* ---------- toast（シートより上に出す） ---------- */
 const toastEl=$("toast"), canPop=typeof toastEl.showPopover==="function";
