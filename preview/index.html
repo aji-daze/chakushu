@@ -709,8 +709,10 @@ async function syncWake(){
 }
 
 /* ---------- 戻るボタン（Android）でシート・タブを戻す ---------- */
-let ignorePop=false, sheetSwitch=false;
+let backPending=false, sheetSwitch=false;
 function pushNav(st){ try{ history.pushState(st,""); }catch(e){} }
+// 自分で戻るときは一度だけ。戻り終わるまで二重に戻らない
+function navBack(){ if(backPending) return; backPending=true; history.back(); setTimeout(()=>{ backPending=false; },800); }
 function setView(v,fromPop){
   view=v; try{ localStorage.setItem(VKEY,v); }catch(e){}
   ["timer","tasks","cal","log"].forEach(k=>{ $("v-"+k).hidden=k!==v; });
@@ -724,13 +726,13 @@ function setView(v,fromPop){
   if(!fromPop){
     const st=history.state||{};
     if(v!=="timer"){ if(st.view&&st.view!=="timer") history.replaceState({view:v},""); else pushNav({view:v}); }
-    else if(st.view&&st.view!=="timer"){ ignorePop=true; history.back(); }
+    else if(st.view&&st.view!=="timer") navBack();
   }
 }
 window.addEventListener("popstate",()=>{
-  if(ignorePop){ ignorePop=false; return; }
+  if(backPending){ backPending=false; return; }
   const open=document.querySelector("dialog[open]");
-  if(open){ open.close(); return; }
+  if(open){ try{ open.close(); }catch(e){ open.removeAttribute("open"); } open.style.transform=""; return; }
   if(view!=="timer") setView("timer",true);
 });
 
@@ -1224,13 +1226,18 @@ function openSheet(id){
   const st=history.state||{};
   if(st.sheet) history.replaceState({...st,sheet:id},""); else pushNav({...st,view,sheet:id});
 }
-function closeSheet(id){ const d=$(id); if(d.open){ try{ d.close(); }catch(e){ d.removeAttribute("open"); } } }
+function syncSheetHistory(id){ const st=history.state||{}; if(st.sheet===id) navBack(); }
+function closeSheet(id){
+  const d=$(id); if(!d.open) return;
+  try{ d.close(); }catch(e){ d.removeAttribute("open"); }
+  d.style.transform="";
+  syncSheetHistory(id);
+}
 document.querySelectorAll("dialog").forEach(d=>{
+  // Escキーなど、closeSheet を通らずに閉じた場合の後始末
   d.addEventListener("close",()=>{
     d.style.transform="";
-    if(sheetSwitch) return;
-    const st=history.state||{};
-    if(st.sheet===d.id){ ignorePop=true; history.back(); }
+    if(!sheetSwitch) syncSheetHistory(d.id);
   });
   // シートの外側（暗い部分）をタップしたときだけ閉じる
   d.addEventListener("click",e=>{
