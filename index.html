@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
 <title>ConTodo</title>
 <meta name="description" content="やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み。">
 <meta name="theme-color" content="#F5F6F5" id="meta-theme">
 <script>
 (function(){
+  var root=document.documentElement;
   var t="auto";
   try{ var s=JSON.parse(localStorage.getItem("chakushu.v1")); if(s&&s.settings&&s.settings.theme) t=s.settings.theme; }catch(e){}
   var C={light:"#F5F6F5",dark:"#111314",paper:"#F2EEE5",mauve:"#F3EEF3"};
   if(!C[t]) t="auto";
-  if(t!=="auto") document.documentElement.setAttribute("data-theme",t);
+  if(t!=="auto") root.setAttribute("data-theme",t);
   var dark=t==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches;
   document.getElementById("meta-theme").setAttribute("content",t==="auto"?(dark?C.dark:C.light):C[t]);
 })();
@@ -37,7 +39,8 @@
   --f-serif:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
   --f-mono:"DM Mono",ui-monospace,"SFMono-Regular","Consolas",monospace;
-  --tabbar:64px;
+  --tabbar:60px;
+  --gutter:max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme]){
@@ -71,55 +74,59 @@
   --sun:#A8485E; --sat:#5D6A99;
   --backdrop:rgba(43,35,49,.3);
 }
-.themes{display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-top:12px}
-.themes button{display:grid; justify-items:center; gap:6px; font-size:11px; color:var(--ink-2); padding:8px 0 6px; border-radius:12px; border:1px solid transparent}
-.themes button[aria-pressed="true"]{border-color:var(--ink); color:var(--ink)}
-.themes i{width:32px; height:32px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.7;
-  padding-inline:max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right));
-  padding-block:env(safe-area-inset-top) calc(var(--tabbar) + env(safe-area-inset-bottom) + 24px);
-  -webkit-tap-highlight-color:transparent; overscroll-behavior-y:none}
+html{height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100%; touch-action:manipulation; background:var(--bg)}
+/* アプリの骨組み：ヘッダー／中身（ここだけスクロール）／タブバー。
+   高さは画面そのもの（height:100%）に合わせるので、起動直後や回転でもずれない */
+body{margin:0; height:100%; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none;
+  background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.7; -webkit-tap-highlight-color:transparent}
 button,input,select{font:inherit; color:inherit}
-button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipulation; -webkit-user-select:none; user-select:none}
+button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipulation; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
 [hidden]{display:none!important}
 :focus-visible{outline:1.5px solid var(--accent); outline-offset:3px; border-radius:4px}
-.app{max-width:460px; margin-inline:auto}
 .mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
 
-.top{display:flex; align-items:center; justify-content:space-between; padding-block:14px 6px}
+.top{flex:none; padding:calc(env(safe-area-inset-top) + 4px) var(--gutter) 0}
+.top-in{max-width:460px; margin-inline:auto; display:flex; align-items:center; justify-content:space-between; min-height:48px}
 .wordmark{font-family:var(--f-serif); font-weight:600; font-size:16px; letter-spacing:.14em; margin:0}
 .link{font-size:13px; color:var(--ink-2); padding:10px 0 10px 12px; min-height:44px}
+.views{flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding-inline:var(--gutter); -webkit-overflow-scrolling:touch}
+.app{max-width:460px; margin-inline:auto; padding-bottom:28px}
+.views[data-screen="timer"] .app{height:100%; padding-bottom:0}
 .eyebrow{font-family:var(--f-serif); font-size:12px; letter-spacing:.18em; color:var(--ink-3); margin:0}
 
-/* timer */
-.timer-view{display:flex; flex-direction:column; align-items:center; text-align:center;
-  min-height:calc(100svh - var(--tabbar) - env(safe-area-inset-bottom) - env(safe-area-inset-top) - 90px); justify-content:space-evenly; gap:16px; padding-block:4px}
+/* timer：空いている高さに合わせてリングが伸び縮みする */
+.timer-view{display:flex; flex-direction:column; align-items:center; text-align:center; min-height:100%; gap:10px; padding-block:4px 14px}
+.tv-top{display:grid; gap:8px; justify-items:center; width:100%; flex:none}
+.tv-bottom{display:grid; gap:12px; justify-items:center; width:100%; flex:none}
 .today-plan{font-size:12px; color:var(--ink-2); border:1px solid var(--line); border-radius:999px; padding:4px 14px; min-height:30px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.task-line{display:grid; gap:6px; justify-items:center; max-width:100%}
+.task-line{display:grid; gap:4px; justify-items:center; max-width:100%}
 .task-btn{font-size:13px; color:var(--ink-2); display:inline-flex; gap:6px; align-items:center; min-height:32px; max-width:100%}
 .task-btn span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .task-btn svg{flex:none; width:10px; height:10px; stroke:currentColor; fill:none; stroke-width:1.5}
-.step-text{font-size:19px; font-weight:500; line-height:1.55; margin:0; text-wrap:balance; max-width:22em}
+.step-text{font-size:19px; font-weight:500; line-height:1.5; margin:0; text-wrap:balance; max-width:22em;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
 .step-text.muted{color:var(--ink-3); font-weight:400; font-size:16px}
 .pill{border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--ink-2); padding:6px 14px; min-height:32px}
-.ring{position:relative; width:min(72vw,280px); aspect-ratio:1; max-width:100%}
+/* リングは空いている枠の大きさから CSS だけで決める（スクリプトの計算を待たない） */
+.ring-box{position:relative; flex:1 1 0; min-height:110px; width:100%; container-type:size}
+.ring{--d:240px; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:var(--d); height:var(--d)}
+@supports (container-type:size){ .ring{--d:min(calc(100cqh - 4px), 80cqw, 300px)} }
 .ring svg{width:100%; height:100%; transform:rotate(-90deg); display:block}
 .ring .track{stroke:var(--line); fill:none; stroke-width:1.5}
 .ring .prog{stroke:var(--accent); fill:none; stroke-width:2.5; stroke-linecap:round; transition:stroke-dashoffset .3s linear, stroke .4s}
 .ring[data-phase="short"] .prog,.ring[data-phase="long"] .prog{stroke:var(--rest)}
 .ring .read{position:absolute; inset:0; display:grid; place-content:center; gap:6px}
-.digits{font-family:var(--f-mono); font-weight:300; font-variant-numeric:tabular-nums; font-size:clamp(50px,16vw,66px); line-height:1; letter-spacing:-.02em}
+.digits{font-family:var(--f-mono); font-weight:300; font-variant-numeric:tabular-nums; font-size:calc(var(--d,240px) * .235); line-height:1; letter-spacing:-.02em}
 .phase{font-family:var(--f-serif); font-size:13px; letter-spacing:.24em; color:var(--ink-2)}
 .ring[data-phase="short"] .phase,.ring[data-phase="long"] .phase{color:var(--rest)}
-.dots{display:flex; gap:10px; justify-content:center; align-items:center; margin-top:-4px}
+.dots{display:flex; gap:10px; justify-content:center; align-items:center}
 .dots i{width:7px; height:7px; border-radius:50%; border:1px solid var(--ink-3)}
 .dots i.on{background:var(--accent); border-color:var(--accent)}
 .dots i.cur{border-color:var(--accent)}
 .today-line{font-size:12px; color:var(--ink-3); margin:0}
 .controls{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; width:100%; max-width:320px}
-.play{width:76px; height:76px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; transition:transform .15s}
+.play{width:72px; height:72px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; transition:transform .15s}
 .play:active{transform:scale(.95)}
 .play svg{width:24px; height:24px; fill:currentColor}
 .side{font-size:13px; color:var(--ink-2); min-height:44px; padding-inline:4px}
@@ -127,9 +134,16 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .side.l{justify-self:start}.side.r{justify-self:end}
 .quick{display:flex; gap:22px; justify-content:center; flex-wrap:wrap}
 .quick button{font-size:13px; color:var(--ink-2); min-height:40px; border-bottom:1px solid var(--line); padding-inline:2px}
+@media (max-height:620px){
+  .timer-view{gap:6px}
+  .task-line .eyebrow{display:none}
+  .step-text{font-size:17px; -webkit-line-clamp:2}
+  .play{width:62px; height:62px}
+  .quick button{min-height:34px}
+}
 
 /* lists */
-.view-head{padding-block:22px 12px; display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.view-head{padding-block:18px 12px; display:flex; align-items:baseline; justify-content:space-between; gap:12px}
 .view-head h2{font-family:var(--f-serif); font-weight:500; font-size:22px; margin:0; letter-spacing:.06em}
 .view-head p{margin:0; font-size:12px; color:var(--ink-3)}
 .field{display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--line); padding-block:4px}
@@ -171,10 +185,10 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .park-row.done span{color:var(--ink-3); text-decoration:line-through}
 
 /* calendar */
-.cal-top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-block:18px 10px}
-.cal-month{display:flex; align-items:center; gap:2px}
-.cal-month h2{font-family:var(--f-serif); font-weight:500; font-size:21px; margin:0 6px; letter-spacing:.04em; min-width:6.4em; text-align:center}
-.nav{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; color:var(--ink-2)}
+.cal-top{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 10px; padding-block:14px 10px}
+.cal-month{display:flex; align-items:center}
+.cal-month h2{font-family:var(--f-serif); font-weight:500; font-size:19px; margin:0 2px; letter-spacing:.03em; min-width:5.9em; text-align:center; white-space:nowrap}
+.nav{width:36px; height:40px; border-radius:50%; display:grid; place-items:center; color:var(--ink-2)}
 .nav svg{width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:1.6}
 .seg{display:inline-grid; grid-auto-flow:column; border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; flex:none}
 .seg button{font-size:13px; color:var(--ink-2); border-radius:999px; padding:6px 12px; min-height:32px}
@@ -188,8 +202,8 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .stamp-hint{font-size:12px; color:var(--accent); margin:-4px 0 8px}
 .wk{display:grid; grid-template-columns:repeat(7,1fr); font-size:11px; color:var(--ink-3); text-align:center; padding-block:4px; letter-spacing:.06em}
 .wk span:first-child{color:var(--sun)} .wk span:last-child{color:var(--sat)}
-.grid{display:grid; grid-template-columns:repeat(7,1fr); border-top:1px solid var(--line)}
-.day{position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 1px 6px; min-height:62px; border-bottom:1px solid var(--line); border-radius:0; overflow:hidden}
+.grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid var(--line); touch-action:pan-y}
+.day{position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 1px 6px; min-height:60px; min-width:0; border-bottom:1px solid var(--line); border-radius:0; overflow:hidden}
 .day .num{font-family:var(--f-mono); font-size:13px; width:26px; height:26px; line-height:26px; border-radius:50%; text-align:center; position:relative; z-index:1}
 .day.sun .num{color:var(--sun)} .day.sat .num{color:var(--sat)}
 .day.out{opacity:.35}
@@ -199,14 +213,14 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .sbar{display:block; width:calc(100% - 6px); font-size:9px; line-height:14px; height:14px; border-radius:3px; color:#fff; overflow:hidden; white-space:nowrap; text-overflow:clip; letter-spacing:0}
 .edots{display:flex; gap:3px; height:5px}
 .edots i{width:4px; height:4px; border-radius:50%; background:var(--ink-2)}
-.heat{position:absolute; inset:6px 8px auto; height:26px; margin:0 auto; left:50%; transform:translateX(-50%); width:30px; border-radius:50%; background:transparent}
+.heat{position:absolute; top:4px; left:50%; transform:translateX(-50%); width:30px; height:26px; border-radius:50%; background:transparent}
 .day[data-lv="1"] .heat{background:color-mix(in srgb, var(--accent) 16%, transparent)}
 .day[data-lv="2"] .heat{background:color-mix(in srgb, var(--accent) 34%, transparent)}
 .day[data-lv="3"] .heat{background:color-mix(in srgb, var(--accent) 58%, transparent)}
 .day[data-lv="4"] .heat{background:var(--accent)}
 .day[data-lv="3"]:not(.today) .num,.day[data-lv="4"]:not(.today) .num{color:var(--bg)}
 .pmin{font-family:var(--f-mono); font-size:9px; color:var(--ink-3); line-height:12px}
-.legend{display:flex; gap:10px; align-items:center; justify-content:flex-end; font-size:10px; color:var(--ink-3); padding-block:8px 0}
+.legend{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; justify-content:flex-end; font-size:10px; color:var(--ink-3); padding-block:8px 0}
 .legend i{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:3px; vertical-align:-1px}
 .panel{padding-block:20px 4px}
 .panel-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
@@ -220,12 +234,12 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .swatch{width:10px; height:10px; border-radius:50%; flex:none}
 .sum{margin-top:28px}
 .sum-job{padding-block:14px; border-bottom:1px solid var(--line)}
-.sum-job-h{display:flex; align-items:center; gap:8px; justify-content:space-between}
+.sum-job-h{display:flex; align-items:center; gap:8px; justify-content:space-between; flex-wrap:wrap}
 .sum-job-h b{font-weight:500; display:flex; align-items:center; gap:8px}
 .sum-job-h span{font-size:11px; color:var(--ink-3)}
 .big{font-family:var(--f-mono); font-weight:300; font-size:30px; line-height:1.25; font-variant-numeric:tabular-nums; margin:4px 0 0}
 .big small{font-family:var(--f-body); font-size:12px; color:var(--ink-2); margin-left:4px}
-.breakdown{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px}
+.breakdown{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px}
 .breakdown div{font-size:11px; color:var(--ink-3)}
 .breakdown b{display:block; font-family:var(--f-mono); font-weight:400; font-size:13px; color:var(--ink)}
 .meter{height:3px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:8px}
@@ -234,8 +248,8 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .fine{font-size:11px; color:var(--ink-3); margin:10px 0 0; line-height:1.6}
 
 /* log */
-.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-block:6px 20px; border-bottom:1px solid var(--line)}
-.kpi b{display:block; font-family:var(--f-mono); font-weight:300; font-size:30px; line-height:1.2; font-variant-numeric:tabular-nums}
+.kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding-block:6px 20px; border-bottom:1px solid var(--line)}
+.kpi b{display:block; font-family:var(--f-mono); font-weight:300; font-size:28px; line-height:1.2; font-variant-numeric:tabular-nums}
 .kpi b small{font-family:var(--f-body); font-size:12px; color:var(--ink-2); margin-left:3px; font-weight:400}
 .kpi span{font-size:11px; color:var(--ink-3); letter-spacing:.06em}
 .tally-wrap{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-block:16px; border-bottom:1px solid var(--line)}
@@ -255,17 +269,17 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .hint-list li{padding-block:8px; border-bottom:1px solid var(--line)}
 
 /* tab bar */
-.tabbar{position:fixed; inset:auto 0 0 0; height:calc(var(--tabbar) + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom);
-  background:var(--bg); border-top:1px solid var(--line); display:flex; justify-content:center; z-index:5}
+.tabbar{flex:none; height:calc(var(--tabbar) + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom);
+  background:var(--bg); border-top:1px solid var(--line); display:flex; justify-content:center}
 .tabbar-in{display:grid; grid-template-columns:repeat(4,1fr); width:100%; max-width:460px; padding-inline:12px}
-.tab{display:grid; place-items:center; align-content:center; gap:4px; font-size:12px; color:var(--ink-3); letter-spacing:.06em}
+.tab{display:grid; place-items:center; align-content:center; gap:4px; font-size:12px; color:var(--ink-3); letter-spacing:.06em; min-width:0}
 .tab i{width:4px; height:4px; border-radius:50%; background:transparent}
 .tab[aria-current="page"]{color:var(--ink)}
 .tab[aria-current="page"] i{background:var(--ink)}
 .tab .live{font-family:var(--f-mono); font-size:12px}
 
-/* sheets */
-dialog{margin:auto auto 0; width:100%; max-width:520px; max-height:90svh; overflow:auto; border:0; border-radius:18px 18px 0 0;
+/* sheets（キーボードが出ても隠れない） */
+dialog{margin:auto auto var(--kb,0px); width:100%; max-width:520px; max-height:calc(90vh - var(--kb,0px)); max-height:calc(90dvh - var(--kb,0px)); overflow:auto; overscroll-behavior:contain; border:0; border-radius:18px 18px 0 0;
   padding:12px 22px calc(26px + env(safe-area-inset-bottom)); background:var(--surface); color:var(--ink)}
 dialog::backdrop{background:var(--backdrop)}
 @media (min-width:560px){ dialog{margin:auto; border-radius:18px} }
@@ -273,25 +287,25 @@ dialog::backdrop{background:var(--backdrop)}
 .sheet-title{font-family:var(--f-serif); font-weight:500; font-size:18px; margin:0 0 4px; letter-spacing:.06em}
 .sheet-sub{font-size:12px; color:var(--ink-3); margin:0 0 14px}
 .set{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-block:12px; border-bottom:1px solid var(--line)}
-.set-l{display:grid}
+.set-l{display:grid; min-width:0}
 .set-l label,.set-l span:first-child{font-size:15px}
 .set-l small{font-size:11px; color:var(--ink-3); line-height:1.5}
-.stepper{display:flex; align-items:center; gap:4px}
+.stepper{display:flex; align-items:center; gap:4px; flex:none}
 .stepper button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); font-size:16px; color:var(--ink-2)}
-.stepper output{min-width:48px; text-align:center; font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.stepper output{min-width:44px; text-align:center; font-family:var(--f-mono); font-variant-numeric:tabular-nums}
 .switch{appearance:none; -webkit-appearance:none; width:44px; height:26px; border-radius:13px; background:var(--line); position:relative; cursor:pointer; flex:none; margin:0; transition:background .2s}
 .switch::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,.2); transition:transform .2s}
 .switch:checked{background:var(--ink)}
 .switch:checked::after{transform:translateX(18px)}
 .group-label{font-family:var(--f-serif); font-size:12px; letter-spacing:.18em; color:var(--ink-3); margin:18px 0 0}
 .done-btn{width:100%; margin-top:18px; min-height:48px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:15px}
-.frm{display:grid; gap:4px}
+.frm{display:grid; gap:4px; min-width:0}
 .frm label{font-size:11px; color:var(--ink-3); letter-spacing:.06em; margin-top:10px}
-.inp{width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; padding:9px 0; font-size:16px; border-radius:0; outline:none; min-height:44px}
+.inp{width:100%; min-width:0; border:0; border-bottom:1px solid var(--line); background:transparent; padding:9px 0; font-size:16px; border-radius:0; outline:none; min-height:44px}
 .inp:focus{border-color:var(--ink-2)}
 select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%); background-position:calc(100% - 10px) 50%,calc(100% - 5px) 50%; background-size:5px 5px; background-repeat:no-repeat; padding-right:20px}
-.two{display:grid; grid-template-columns:1fr 1fr; gap:16px}
-.three{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+.two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.three{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr); gap:12px}
 .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
 .preview{margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--accent-soft); font-size:13px}
 .preview b{font-family:var(--f-mono); font-weight:400; font-size:20px; display:block}
@@ -302,30 +316,40 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
 .colors button{width:30px; height:30px; border-radius:50%; box-shadow:inset 0 0 0 2px transparent}
 .colors button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--ink)}
 .msg{font-size:13px; color:var(--ink-2); background:var(--accent-soft); padding:10px 12px; border-radius:8px; margin-top:10px}
+.themes{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; margin-top:12px}
+.themes button{display:grid; justify-items:center; gap:6px; font-size:11px; color:var(--ink-2); padding:8px 0 6px; border-radius:12px; border:1px solid transparent}
+.themes button[aria-pressed="true"]{border-color:var(--ink); color:var(--ink)}
+.themes i{width:32px; height:32px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
 
-.toast{position:fixed; left:50%; bottom:calc(var(--tabbar) + env(safe-area-inset-bottom) + 14px); transform:translateX(-50%); background:var(--ink); color:var(--bg);
-  padding:10px 18px; border-radius:999px; font-size:13px; width:max-content; max-width:calc(100% - 40px); text-align:center; z-index:9}
+/* toast：シートの上にも出る */
+.toast{position:fixed; inset:auto; left:50%; bottom:calc(var(--tabbar) + env(safe-area-inset-bottom) + 14px); transform:translateX(-50%); margin:0; border:0; overflow:visible;
+  background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:999px; font-size:13px; line-height:1.5; width:max-content; max-width:calc(100% - 40px); text-align:center; z-index:9}
 .flash{animation:flash 1.2s ease-out}
 @keyframes flash{0%{background:var(--accent-soft)}100%{background:var(--bg)}}
 @media (prefers-reduced-motion: reduce){ .ring .prog,.chev,.play,.switch,.switch::after{transition:none} .flash{animation:none} }
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="top">
+<header class="top">
+  <div class="top-in">
     <p class="wordmark">ConTodo</p>
     <button class="link" data-act="open-settings">設定</button>
-  </header>
+  </div>
+</header>
 
+<main class="views" id="scroller" data-screen="timer">
+<div class="app">
   <section id="v-timer" class="timer-view" aria-label="タイマー">
-    <button class="today-plan" id="today-plan" data-act="go-today" hidden></button>
-    <div class="task-line">
-      <button class="task-btn" data-act="go-tasks" id="task-btn"></button>
-      <p class="eyebrow">次の一歩</p>
-      <p class="step-text" id="step-text"></p>
-      <div id="step-act"></div>
+    <div class="tv-top">
+      <button class="today-plan" id="today-plan" data-act="go-today" hidden></button>
+      <div class="task-line">
+        <button class="task-btn" data-act="go-tasks" id="task-btn"></button>
+        <p class="eyebrow">次の一歩</p>
+        <p class="step-text" id="step-text"></p>
+        <div id="step-act"></div>
+      </div>
     </div>
-    <div>
+    <div class="ring-box" id="ring-box">
       <div class="ring" id="ring" data-phase="focus">
         <svg viewBox="0 0 300 300" aria-hidden="true">
           <circle class="track" cx="150" cy="150" r="140"></circle>
@@ -334,18 +358,20 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
         <div class="read"><div class="digits" id="digits">25:00</div><div class="phase" id="phase">集中</div></div>
       </div>
     </div>
-    <div style="display:grid; gap:10px; justify-items:center">
-      <div class="dots" id="dots" aria-hidden="true"></div>
-      <p class="today-line" id="today-line"></p>
-    </div>
-    <div class="controls">
-      <button class="side l" id="btn-left" data-act="reset">リセット</button>
-      <button class="play" id="btn-play" data-act="toggle" aria-label="開始"></button>
-      <button class="side r" id="btn-right" data-act="skip">スキップ</button>
-    </div>
-    <div class="quick">
-      <button data-act="quick5">5分だけやってみる</button>
-      <button data-act="open-park">脇道メモ</button>
+    <div class="tv-bottom">
+      <div style="display:grid; gap:6px; justify-items:center">
+        <div class="dots" id="dots" aria-hidden="true"></div>
+        <p class="today-line" id="today-line"></p>
+      </div>
+      <div class="controls">
+        <button class="side l" id="btn-left" data-act="reset">リセット</button>
+        <button class="play" id="btn-play" data-act="toggle" aria-label="開始"></button>
+        <button class="side r" id="btn-right" data-act="skip">スキップ</button>
+      </div>
+      <div class="quick">
+        <button data-act="quick5">5分だけやってみる</button>
+        <button data-act="open-park">脇道メモ</button>
+      </div>
     </div>
   </section>
 
@@ -386,6 +412,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
     <div id="log"></div>
   </section>
 </div>
+</main>
 
 <nav class="tabbar" aria-label="画面の切り替え">
   <div class="tabbar-in">
@@ -446,7 +473,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
       <div class="frm"><label for="sh-break">休憩（分）</label><input class="inp mono" type="number" inputmode="numeric" min="0" step="5" id="sh-break"></div>
     </div>
     <label for="sh-wage">この日の時給（円）</label>
-    <input class="inp mono" type="number" inputmode="numeric" min="0" id="sh-wage">
+    <input class="inp mono" type="number" inputmode="numeric" min="0" id="sh-wage" placeholder="空欄なら勤務先の時給">
     <div class="preview" id="sh-preview"></div>
     <div class="sheet-actions">
       <button type="button" class="act danger" data-act="del-shift" id="sh-del" hidden>削除</button>
@@ -541,6 +568,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   <div class="set"><div class="set-l"><label for="s-vibrate">振動</label><small id="vib-note">区切りでスマホを振動させる</small></div><input type="checkbox" class="switch" id="s-vibrate"></div>
   <div class="set"><div class="set-l"><span>振動のテスト</span><small id="vib-test-note">この端末で振動するか確かめる</small></div><button class="act" data-act="test-vibrate">試す</button></div>
   <div class="set"><div class="set-l"><label for="s-sound">音</label><small>小さなチャイムを鳴らす</small></div><input type="checkbox" class="switch" id="s-sound"></div>
+  <div class="set"><div class="set-l"><label for="s-notify">アプリを離れている時は通知</label><small id="notify-note">ほかのアプリを見ている間に区切りが来たら、通知で知らせる</small></div><input type="checkbox" class="switch" id="s-notify"></div>
   <div class="set"><div class="set-l"><label for="s-wake">画面をつけたままにする</label><small id="wake-note">タイマー中は画面を消さない（対応端末のみ）</small></div><input type="checkbox" class="switch" id="s-wake"></div>
   <p class="group-label">シフトと給与</p>
   <div class="set"><div class="set-l"><span>勤務先とシフトパターン</span><small>時給・締め日・給料日・深夜手当</small></div><button class="act" data-act="open-jobs">編集</button></div>
@@ -551,7 +579,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   <button class="done-btn" data-act="close-settings">閉じる</button>
 </dialog>
 
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" popover="manual" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -566,11 +594,39 @@ const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 const hm=min=>{const h=Math.floor(min/60), m=min%60; return h+"時間"+(m?m+"分":"");};
 const DAY=86400000;
 const WD="日月火水木金土";
-const DEFAULTS={focus:25,short:5,long:15,every:4,autoBreak:true,autoFocus:false,vibrate:true,sound:true,wake:false,theme:"auto",incomeLine:0};
+const DEFAULTS={focus:25,short:5,long:15,every:4,autoBreak:true,autoFocus:false,vibrate:true,sound:true,wake:false,notify:false,theme:"auto",incomeLine:0};
 const PHASE_LABEL={focus:"集中",short:"小休憩",long:"長い休憩",quick:"5分だけ"};
 const VIB={start:[18], focusEnd:[260,120,260,120,520], breakEnd:[140,90,140], tap:[10]};
 const JOB_COLORS=["#4A6A90","#5E8F76","#B07D48","#8A6495"];
 const $=id=>document.getElementById(id);
+const scroller=$("scroller");
+
+/* ---------- 画面サイズ（キーボードの高さだけ測る） ---------- */
+if(window.visualViewport){
+  const vv=window.visualViewport;
+  const updKb=()=>{ const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop); document.documentElement.style.setProperty("--kb",(kb>80?Math.round(kb):0)+"px"); };
+  vv.addEventListener("resize",updKb); vv.addEventListener("scroll",updKb);
+}
+// 古いブラウザ（container query 非対応）だけ、スクリプトでリングの大きさを合わせる
+const cqOK=window.CSS&&CSS.supports&&CSS.supports("container-type","size");
+function fitRing(){
+  if(cqOK) return;
+  const box=$("ring-box"); if(!box||!box.offsetParent) return;
+  const r=box.getBoundingClientRect();
+  const size=Math.max(110,Math.floor(Math.min(r.height-4,r.width*.8,300)));
+  $("ring").style.setProperty("--d",size+"px");
+}
+if(!cqOK){ if(window.ResizeObserver) new ResizeObserver(fitRing).observe($("ring-box")); else window.addEventListener("resize",fitRing); }
+
+/* ---------- toast（シートより上に出す） ---------- */
+const toastEl=$("toast"), canPop=typeof toastEl.showPopover==="function";
+if(!canPop){ toastEl.removeAttribute("popover"); toastEl.hidden=true; }
+function toast(msg){
+  toastEl.textContent=msg;
+  if(canPop){ try{ toastEl.hidePopover(); }catch(e){} try{ toastEl.showPopover(); }catch(e){} } else toastEl.hidden=false;
+  clearTimeout(toast.t);
+  toast.t=setTimeout(()=>{ if(canPop){ try{ toastEl.hidePopover(); }catch(e){} } else toastEl.hidden=true; },2800);
+}
 
 function sampleState(){
   const t1=uid(), t2=uid();
@@ -614,8 +670,8 @@ const nextStep=t=>t?t.steps.find(s=>!s.done):null;
 const isBreak=p=>p==="short"||p==="long";
 const phaseMin=p=>p==="quick"?5:p==="focus"?S().focus:p==="short"?S().short:S().long;
 const started=()=>timer.running||timer.left<timer.total;
-function toast(msg){ const el=$("toast"); el.textContent=msg; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2800); }
-function buzz(p){ if(!S().vibrate) return false; try{ return navigator.vibrate?navigator.vibrate(p):false; }catch(e){ return false; } }
+const visible=()=>document.visibilityState==="visible";
+function buzz(p){ if(!S().vibrate||!visible()) return false; try{ return navigator.vibrate?navigator.vibrate(p):false; }catch(e){ return false; } }
 
 let audioCtx=null;
 function ensureAudio(){ try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); }catch(e){} }
@@ -630,23 +686,53 @@ function chime(kind){
   }catch(e){}
 }
 
+/* ---------- 通知（アプリを離れている時） ---------- */
+function notifyEnd(title,body){
+  if(!S().notify||visible()) return;
+  if(!("Notification" in window)||Notification.permission!=="granted"||!navigator.serviceWorker) return;
+  navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,tag:"contodo-timer",renotify:true,icon:"icon-192.png",badge:"icon-192.png",vibrate:S().vibrate?VIB.focusEnd:undefined})).catch(()=>{});
+}
+function clearNotifications(){
+  if(!navigator.serviceWorker) return;
+  navigator.serviceWorker.getRegistration().then(r=>{ if(r&&r.getNotifications) r.getNotifications({tag:"contodo-timer"}).then(ns=>ns.forEach(n=>n.close())); }).catch(()=>{});
+}
+
 let wakeLock=null;
 async function syncWake(){
-  const want=S().wake&&timer.running&&document.visibilityState==="visible";
+  const want=S().wake&&timer.running&&visible();
   try{
     if(want&&!wakeLock&&navigator.wakeLock){ wakeLock=await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release",()=>{wakeLock=null;}); }
     else if(!want&&wakeLock){ await wakeLock.release(); wakeLock=null; }
   }catch(e){ if(S().wake) $("wake-note").textContent="この端末では使えませんでした。自動ロックの時間を延ばしてください。"; }
 }
 
-function setView(v){
+/* ---------- 戻るボタン（Android）でシート・タブを戻す ---------- */
+let backPending=false, sheetSwitch=false;
+function pushNav(st){ try{ history.pushState(st,""); }catch(e){} }
+// 自分で戻るときは一度だけ。戻り終わるまで二重に戻らない
+function navBack(){ if(backPending) return; backPending=true; history.back(); setTimeout(()=>{ backPending=false; },800); }
+function setView(v,fromPop){
   view=v; try{ localStorage.setItem(VKEY,v); }catch(e){}
   ["timer","tasks","cal","log"].forEach(k=>{ $("v-"+k).hidden=k!==v; });
+  scroller.dataset.screen=v;
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current",t.dataset.view===v?"page":"false"));
+  if(v!=="cal") cal.stamp=null;
   if(v==="log") renderLog();
   if(v==="cal") renderCal();
-  window.scrollTo(0,0);
+  if(v==="timer") requestAnimationFrame(fitRing);
+  scroller.scrollTop=0;
+  if(!fromPop){
+    const st=history.state||{};
+    if(v!=="timer"){ if(st.view&&st.view!=="timer") history.replaceState({view:v},""); else pushNav({view:v}); }
+    else if(st.view&&st.view!=="timer") navBack();
+  }
 }
+window.addEventListener("popstate",()=>{
+  if(backPending){ backPending=false; return; }
+  const open=document.querySelector("dialog[open]");
+  if(open){ try{ open.close(); }catch(e){ open.removeAttribute("open"); } open.style.transform=""; return; }
+  if(view!=="timer") setView("timer",true);
+});
 
 /* ================= shift & pay ================= */
 const jobById=id=>state.jobs.find(j=>j.id===id)||null;
@@ -666,7 +752,6 @@ function calcShift(sh){
   const transport=job?Number(job.transport)||0:0;
   return {wage,worked,night,over,base,extra,transport,total:base+extra+transport};
 }
-// 締め日で「何月締め分か」を返す（締め日0=末日）
 function periodOf(dateKey,job){
   const {y,m,d}=parseKey(dateKey); const c=job?Number(job.closing)||0:0;
   let py=y, pm=m; if(c&&d>c){ pm++; if(pm>12){ pm=1; py++; } }
@@ -736,36 +821,41 @@ function tick(){
   document.title=timer.running?`${txt} ${PHASE_LABEL[timer.phase]} ・ ConTodo`:"ConTodo";
   if(timer.running&&timer.left<=0) finish();
 }
-function setPhase(phase,autostart){
+// from: 前の区切りが実際に終わった時刻（離れていた間の分も正しく進める）
+function setPhase(phase,autostart,from){
   const m=phaseMin(phase);
   timer={...timer,phase,total:m*60,left:m*60,endAt:0,running:false,distractions:0};
-  if(autostart){ timer.running=true; timer.endAt=Date.now()+timer.left*1000; }
+  if(autostart){ timer.running=true; timer.endAt=(from||Date.now())+m*60000; }
   saveTimer(); syncWake(); renderTimerView();
 }
 function start(){ ensureAudio(); buzz(VIB.start); timer.running=true; timer.endAt=Date.now()+timer.left*1000; saveTimer(); syncWake(); renderControls(); tick(); }
 function pause(){ tick(); timer.running=false; saveTimer(); syncWake(); renderControls(); tick(); }
-function logSession(min,complete,kind){
+function logSession(min,complete,kind,at){
   if(min<1) return;
   const ct=curTask();
-  state.sessions.push({id:uid(),at:Date.now(),min,taskId:ct?ct.id:null,complete,kind,distractions:timer.distractions||0});
+  state.sessions.push({id:uid(),at:at||Date.now(),min,taskId:ct?ct.id:null,complete,kind,distractions:timer.distractions||0});
   if(state.sessions.length>3000) state.sessions=state.sessions.slice(-3000);
   save();
 }
 function finish(){
-  const p=timer.phase; timer.running=false;
-  document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash");
+  const p=timer.phase, endedAt=timer.endAt||Date.now(); timer.running=false;
+  const fresh=visible()&&Date.now()-endedAt<5000;
+  if(visible()){ document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }
   if(p==="focus"||p==="quick"){
-    buzz(VIB.focusEnd); chime("focusEnd");
-    logSession(Math.round(timer.total/60),true,p==="quick"?"quick":"pomo");
-    if(p==="quick"){ toast("5分できました。続けるなら、もう一度。"); setPhase("focus",false); return; }
+    if(fresh){ buzz(VIB.focusEnd); chime("focusEnd"); }
+    logSession(Math.round(timer.total/60),true,p==="quick"?"quick":"pomo",endedAt);
+    if(p==="quick"){ notifyEnd("5分できました","続けるなら、もう一度はじめましょう。"); toast("5分できました。続けるなら、もう一度。"); setPhase("focus",false); return; }
     timer.round=(timer.round||0)+1;
-    if(timer.round>=S().every){ toast(`${S().every}回完走。長い休憩をどうぞ。`); setPhase("long",S().autoBreak); }
-    else { toast("おつかれさま。少し休みましょう。"); setPhase("short",S().autoBreak); }
+    const long=timer.round>=S().every;
+    notifyEnd("集中おわり",long?"長い休憩をどうぞ。":"少し休みましょう。");
+    toast(long?`${S().every}回完走。長い休憩をどうぞ。`:"おつかれさま。少し休みましょう。");
+    setPhase(long?"long":"short",S().autoBreak,endedAt);
   } else {
-    buzz(VIB.breakEnd); chime("breakEnd");
+    if(fresh){ buzz(VIB.breakEnd); chime("breakEnd"); }
     if(p==="long") timer.round=0;
+    notifyEnd("休憩おわり","次の一歩へ戻りましょう。");
     toast("休憩おわり。次の一歩へ。");
-    setPhase("focus",S().autoFocus);
+    setPhase("focus",S().autoFocus,endedAt);
   }
 }
 function rightAction(){
@@ -779,7 +869,7 @@ function rightAction(){
   setPhase("focus",false);
 }
 setInterval(()=>{ if(timer.running) tick(); },250);
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ tick(); syncWake(); } });
+document.addEventListener("visibilitychange",()=>{ if(visible()){ tick(); syncWake(); clearNotifications(); } });
 
 /* ================= tasks ================= */
 const openRows=new Set(); let armed=null, rowsInit=false;
@@ -837,18 +927,18 @@ function progressOf(k){
   return {min,pomos,tasks,steps,sessions:ss};
 }
 const level=min=>min<=0?0:min<25?1:min<60?2:min<120?3:4;
+function shiftMonth(d){ cal.m+=d; if(cal.m<1){ cal.m=12; cal.y--; } if(cal.m>12){ cal.m=1; cal.y++; } renderCal(); }
 function renderCal(){
   const {y,m}=cal;
   $("cal-title").textContent=`${y}年${m}月`;
   document.querySelectorAll('[data-act="cal-mode"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===cal.mode)));
-  // stamp bar
+  if(cal.stamp&&cal.stamp!=="erase"&&!typeById(cal.stamp)) cal.stamp=null;
   if(cal.mode==="plan"&&state.shiftTypes.length){
     $("cal-stamp").innerHTML=`<div class="stamp"><span class="lbl">シフトを押す</span>${state.shiftTypes.map(t=>{ const j=jobById(t.jobId);
       return `<button class="chip" data-act="stamp" data-id="${t.id}" aria-pressed="${cal.stamp===t.id}"><i style="background:${j?j.color:JOB_COLORS[0]}"></i>${esc(t.name)}</button>`; }).join("")}
       <button class="chip" data-act="stamp" data-id="erase" aria-pressed="${cal.stamp==="erase"}">消す</button></div>
       ${cal.stamp?`<p class="stamp-hint">${cal.stamp==="erase"?"日付をタップすると、その日のシフトを消します":"日付をタップして入れる（もう一度タップで外す）"}。終わったらもう一度チップを押す</p>`:""}`;
   } else $("cal-stamp").innerHTML="";
-  // grid
   const first=new Date(y,m-1,1), startDow=first.getDay(), today=dayKey(Date.now());
   const shiftsBy={}, eventsBy={};
   state.shifts.forEach(s=>{ (shiftsBy[s.date]=shiftsBy[s.date]||[]).push(s); });
@@ -857,7 +947,7 @@ function renderCal(){
   let html="";
   for(let i=0;i<42;i++){
     const d=new Date(y,m-1,1-startDow+i), k=dayKey(d), out=d.getMonth()!==m-1, dow=d.getDay();
-    if(i>=35&&out&&d.getDate()<=7&&i%7===0) break;
+    if(i>=28&&i%7===0&&out) break;
     const cls=["day",out?"out":"",k===today?"today":"",k===cal.sel?"sel":"",dow===0?"sun":"",dow===6?"sat":""].join(" ");
     let inner="";
     if(cal.mode==="plan"){
@@ -919,7 +1009,6 @@ function renderCalSum(){
           <div class="breakdown"><div>出勤<b>${days}日</b></div><div>勤務<b>${hm(tot.worked)}</b></div><div>時給<b>${yen(j.wage)}</b></div>
             <div>基本<b>${yen(tot.base)}</b></div><div>深夜・残業<b>${yen(tot.extra)}</b></div><div>交通費<b>${yen(tot.transport)}</b></div></div></div>`;
       });
-      // 年間（支給日ベース）
       let yearTotal=0;
       state.shifts.forEach(s=>{ const j=jobById(s.jobId); if(!j) return; const p=periodOf(s.date,j); if(payDateOf(p.y,p.m,j).getFullYear()===y) yearTotal+=calcShift(s).total; });
       const line=Number(S().incomeLine)||0;
@@ -946,6 +1035,13 @@ function stampDay(k){
   else { const j=jobById(t.jobId); state.shifts.push({id:uid(),date:k,jobId:t.jobId,typeId:t.id,start:t.start,end:t.end,breakMin:t.breakMin,wage:j?j.wage:0}); }
   save(); buzz(VIB.tap);
 }
+// 左右スワイプで月を移動
+let swX=null, swY=0, swipedAt=0;
+$("cal-grid").addEventListener("touchstart",e=>{ swX=e.touches[0].clientX; swY=e.touches[0].clientY; },{passive:true});
+$("cal-grid").addEventListener("touchend",e=>{
+  if(swX==null) return; const t=e.changedTouches[0], dx=t.clientX-swX, dy=t.clientY-swY; swX=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){ swipedAt=Date.now(); shiftMonth(dx<0?1:-1); }
+},{passive:true});
 
 /* ---- sheets: event ---- */
 function openEvent(id){
@@ -953,7 +1049,7 @@ function openEvent(id){
   $("ev-t").textContent=e?"予定を編集":"予定を追加";
   $("ev-id").value=e?e.id:""; $("ev-title").value=e?e.title:""; $("ev-date").value=e?e.date:cal.sel;
   $("ev-start").value=e?e.start||"":""; $("ev-end").value=e?e.end||"":""; $("ev-note").value=e?e.note||"":"";
-  $("ev-del").hidden=!e; $("ev-del").textContent="削除"; $("ev-del").classList.remove("armed");
+  resetDel("ev-del",!e);
   openSheet("d-event"); if(!e) setTimeout(()=>$("ev-title").focus(),80);
 }
 /* ---- sheets: shift ---- */
@@ -972,7 +1068,7 @@ function openShift(id){
     $("sh-break").value=s?(s.breakMin||0):(t0?t0.breakMin:60); $("sh-wage").value=s?s.wage:job.wage;
     $("sh-types").dataset.type=s?(s.typeId||""):(t0?t0.id:"");
     renderShiftTypes(); updateShiftPreview();
-    $("sh-del").hidden=!s; $("sh-del").textContent="削除"; $("sh-del").classList.remove("armed");
+    resetDel("sh-del",!s);
   }
   openSheet("d-shift");
 }
@@ -982,7 +1078,10 @@ function renderShiftTypes(){
   $("sh-types").innerHTML=list.length?list.map(t=>`<button type="button" class="chip" data-act="sh-type" data-id="${t.id}" aria-pressed="${sel===t.id}">${esc(t.name)} ${fmtT(t.start)}–${fmtT(t.end)}</button>`).join("")
     :`<span class="fine" style="margin:0">パターンがありません。「勤務先とシフトパターン」で作れます。</span>`;
 }
-function readShiftForm(){ return {date:$("sh-date").value, jobId:$("sh-job").value, typeId:$("sh-types").dataset.type||null, start:$("sh-start").value, end:$("sh-end").value, breakMin:Number($("sh-break").value)||0, wage:Number($("sh-wage").value)||0}; }
+function readShiftForm(){
+  const jobId=$("sh-job").value, w=$("sh-wage").value.trim(), j=jobById(jobId);
+  return {date:$("sh-date").value, jobId, typeId:$("sh-types").dataset.type||null, start:$("sh-start").value, end:$("sh-end").value, breakMin:Number($("sh-break").value)||0, wage:w===""?(j?j.wage:0):Number(w)||0};
+}
 function updateShiftPreview(){
   const f=readShiftForm();
   if(!f.start||!f.end){ $("sh-preview").innerHTML="開始と終了を入れると、見込み額を計算します。"; return; }
@@ -999,10 +1098,9 @@ function renderJobs(){
     :`<p class="empty" style="padding-block:10px">${state.jobs.length?"「早番 9:00–17:00」のような型を作ると、カレンダーでタップするだけでシフトを入れられます。":"先に勤務先を登録してください。"}</p>`;
   $("jm-line").value=S().incomeLine||"";
 }
-function openJobs(){ closeAll(); renderJobs(); openSheet("d-jobs"); }
+function openJobs(){ renderJobs(); openSheet("d-jobs"); }
 function openJob(id){
   const j=id?jobById(id):null;
-  closeAll();
   $("j-t").textContent=j?"勤務先を編集":"勤務先を追加";
   $("j-id").value=j?j.id:""; $("j-name").value=j?j.name:""; $("j-wage").value=j?j.wage:""; $("j-transport").value=j?(j.transport||""):"";
   $("j-closing").innerHTML=[0,5,10,15,20,25].map(c=>`<option value="${c}">${c?c+"日締め":"末日締め"}</option>`).join("");
@@ -1012,20 +1110,20 @@ function openJob(id){
   const color=j?j.color:JOB_COLORS[state.jobs.length%JOB_COLORS.length];
   $("j-colors").dataset.color=color;
   $("j-colors").innerHTML=JOB_COLORS.map(c=>`<button type="button" data-act="j-color" data-c="${c}" style="background:${c}" aria-label="色" aria-pressed="${c===color}"></button>`).join("");
-  $("j-del").hidden=!j; $("j-del").textContent="削除"; $("j-del").classList.remove("armed");
+  resetDel("j-del",!j);
   openSheet("d-job"); if(!j) setTimeout(()=>$("j-name").focus(),80);
 }
 function openType(id){
   if(!state.jobs.length){ openJob(null); toast("先に勤務先を登録してください。"); return; }
   const t=id?typeById(id):null;
-  closeAll();
   $("t-t").textContent=t?"パターンを編集":"パターンを追加";
   $("t-job").innerHTML=state.jobs.map(j=>`<option value="${j.id}">${esc(j.name)}</option>`).join("");
   $("t-id").value=t?t.id:""; $("t-name").value=t?t.name:""; $("t-job").value=t?t.jobId:state.jobs[0].id;
   $("t-start").value=t?t.start:"09:00"; $("t-end").value=t?t.end:"17:00"; $("t-break").value=t?(t.breakMin||0):60;
-  $("t-del").hidden=!t; $("t-del").textContent="削除"; $("t-del").classList.remove("armed");
+  resetDel("t-del",!t);
   openSheet("d-type"); if(!t) setTimeout(()=>$("t-name").focus(),80);
 }
+function resetDel(id,hide){ const b=$(id); b.hidden=hide; b.textContent="削除"; b.classList.remove("armed"); }
 function armBtn(btn){ if(btn.classList.contains("armed")) return true; btn.classList.add("armed"); btn.textContent="もう一度で削除"; setTimeout(()=>{ btn.classList.remove("armed"); btn.textContent="削除"; },3000); return false; }
 
 /* ================= log ================= */
@@ -1076,9 +1174,11 @@ const NUMS=[["focus","集中","分",5,60,5],["short","小休憩","分",1,15,1],[
 function renderSettings(){
   $("set-nums").innerHTML=NUMS.map(([k,l,u])=>`<div class="set"><div class="set-l"><span>${l}</span></div>
     <div class="stepper"><button data-act="num" data-k="${k}" data-d="-1" aria-label="${l}を減らす">−</button><output class="mono" id="o-${k}">${S()[k]}${u}</output><button data-act="num" data-k="${k}" data-d="1" aria-label="${l}を増やす">＋</button></div></div>`).join("");
-  ["autoBreak","autoFocus","vibrate","sound","wake"].forEach(k=>{ $("s-"+k).checked=!!S()[k]; });
+  if(S().notify&&"Notification" in window&&Notification.permission!=="granted") S().notify=false;
+  ["autoBreak","autoFocus","vibrate","sound","notify","wake"].forEach(k=>{ $("s-"+k).checked=!!S()[k]; });
   document.querySelectorAll('[data-act="theme"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S().theme)));
   if(!("vibrate" in navigator)) $("vib-note").textContent="この端末は振動に対応していません（iPhoneは非対応）";
+  if(!("Notification" in window)){ $("s-notify").disabled=true; $("notify-note").textContent="この端末・ブラウザは通知に対応していません"; }
 }
 const darkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
 const THEME_META={light:"#F5F6F5",dark:"#111314",paper:"#F2EEE5",mauve:"#F3EEF3"};
@@ -1113,14 +1213,61 @@ $("import-file").addEventListener("change",async e=>{
   }catch(err){ $("import-note").textContent="読み込めませんでした。ConTodoで書き出したファイルを選んでください。"; }
 });
 
-function openSheet(id){ const d=$(id); if(d.open) return; try{ d.showModal(); }catch(e){ d.setAttribute("open",""); } }
-function closeSheet(id){ const d=$(id); try{ d.close(); }catch(e){ d.removeAttribute("open"); } }
-function closeAll(){ document.querySelectorAll("dialog[open]").forEach(d=>closeSheet(d.id)); }
-document.querySelectorAll("dialog").forEach(d=>d.addEventListener("click",e=>{ if(e.target===d) closeSheet(d.id); }));
+/* ---------- sheets ---------- */
+function openSheet(id){
+  const d=$(id); if(d.open) return;
+  const other=document.querySelector("dialog[open]");
+  if(other){ sheetSwitch=true; other.close(); sheetSwitch=false; }
+  d.style.transform="";
+  try{ d.showModal(); }catch(e){ d.setAttribute("open",""); }
+  d.scrollTop=0;
+  const st=history.state||{};
+  if(st.sheet) history.replaceState({...st,sheet:id},""); else pushNav({...st,view,sheet:id});
+}
+function syncSheetHistory(id){ const st=history.state||{}; if(st.sheet===id) navBack(); }
+function closeSheet(id){
+  const d=$(id); if(!d.open) return;
+  try{ d.close(); }catch(e){ d.removeAttribute("open"); }
+  d.style.transform="";
+  syncSheetHistory(id);
+}
+document.querySelectorAll("dialog").forEach(d=>{
+  // Escキーなど、closeSheet を通らずに閉じた場合の後始末
+  d.addEventListener("close",()=>{
+    d.style.transform="";
+    if(!sheetSwitch) syncSheetHistory(d.id);
+  });
+  // シートの外側（暗い部分）をタップしたときだけ閉じる
+  d.addEventListener("click",e=>{
+    if(e.target!==d) return;
+    const r=d.getBoundingClientRect();
+    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) closeSheet(d.id);
+  });
+  // 上端を下にスワイプして閉じる
+  let y0=null, dy=0;
+  d.addEventListener("touchstart",e=>{
+    const t=e.touches[0], r=d.getBoundingClientRect();
+    if(d.scrollTop>0||t.clientY-r.top>56||window.innerWidth>=560){ y0=null; return; }
+    y0=t.clientY; dy=0; d.style.transition="none";
+  },{passive:true});
+  d.addEventListener("touchmove",e=>{
+    if(y0==null) return; dy=Math.max(0,e.touches[0].clientY-y0);
+    d.style.transform=dy?`translateY(${dy}px)`:""; if(dy>0&&e.cancelable) e.preventDefault();
+  },{passive:false});
+  d.addEventListener("touchend",()=>{
+    if(y0==null) return; y0=null; d.style.transition="transform .2s";
+    if(dy>90) closeSheet(d.id); else d.style.transform="";
+  });
+});
+// キーボードが出たら入力欄を見える位置へ
+document.addEventListener("focusin",e=>{
+  const el=e.target; if(!el.matches||!el.matches("input,select,textarea")) return;
+  setTimeout(()=>{ try{ el.scrollIntoView({block:"nearest"}); }catch(_){} },300);
+});
 
 /* ================= events ================= */
 document.addEventListener("click",e=>{
-  const tab=e.target.closest("[data-view]"); if(tab){ setView(tab.dataset.view); tick(); return; }
+  const tab=e.target.closest(".tab[data-view]"); if(tab){ if(tab.dataset.view!==view) setView(tab.dataset.view); else scroller.scrollTo({top:0,behavior:"smooth"}); tick(); return; }
   const b=e.target.closest("[data-act]"); if(!b||b.matches("input")) return;
   const act=b.dataset.act, id=b.dataset.id, task=id?state.tasks.find(t=>t.id===id):null;
   if(act!=="task-del"&&armed) armed=null;
@@ -1128,9 +1275,7 @@ document.addEventListener("click",e=>{
     case "toggle": timer.running?pause():start(); break;
     case "reset": setPhase(timer.phase==="quick"?"focus":timer.phase,false); break;
     case "skip": rightAction(); break;
-    case "quick5":
-      if(timer.phase==="focus"&&started()) rightAction();
-      setPhase("quick",false); start(); toast("5分だけ。終わったらやめてもいい約束です。"); break;
+    case "quick5": quick5(); break;
     case "open-park": openSheet("d-park"); setTimeout(()=>$("park-input").focus(),60); break;
     case "open-settings": renderSettings(); openSheet("d-settings"); break;
     case "close-settings": closeSheet("d-settings"); break;
@@ -1164,11 +1309,12 @@ document.addEventListener("click",e=>{
     case "import": $("import-file").click(); break;
 
     /* calendar */
-    case "cal-prev": cal.m--; if(cal.m<1){ cal.m=12; cal.y--; } renderCal(); break;
-    case "cal-next": cal.m++; if(cal.m>12){ cal.m=1; cal.y++; } renderCal(); break;
+    case "cal-prev": shiftMonth(-1); break;
+    case "cal-next": shiftMonth(1); break;
     case "cal-mode": cal.mode=b.dataset.v; cal.stamp=null; saveCal(); renderCal(); break;
     case "stamp": cal.stamp=cal.stamp===id?null:id; renderCal(); break;
     case "day": {
+      if(Date.now()-swipedAt<400) break;
       const k=b.dataset.k, {y,m}=parseKey(k);
       cal.sel=k;
       if(cal.mode==="plan"&&cal.stamp) stampDay(k);
@@ -1189,11 +1335,15 @@ document.addEventListener("click",e=>{
     case "edit-type": openType(id); break;
     case "j-color": $("j-colors").dataset.color=b.dataset.c; $("j-colors").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); break;
     case "del-job": if(armBtn(b)){ const jid=$("j-id").value;
-      state.jobs=state.jobs.filter(x=>x.id!==jid); state.shiftTypes=state.shiftTypes.filter(t=>t.jobId!==jid); state.shifts=state.shifts.filter(s=>s.jobId!==jid);
-      save(); openJobs(); toast("勤務先と、そのシフトを削除しました。"); } break;
+      state.jobs=state.jobs.filter(x=>x.id!==jid); state.shiftTypes=state.shiftTypes.filter(t=>t.jobId!==jid); state.shifts=state.shifts.filter(s=>s.jobId!==jid); cal.stamp=null;
+      save(); openJobs(); if(view==="cal") renderCal(); renderTodayPlan(); toast("勤務先と、そのシフトを削除しました。"); } break;
     case "del-type": if(armBtn(b)){ const tid=$("t-id").value; state.shiftTypes=state.shiftTypes.filter(x=>x.id!==tid); state.shifts.forEach(s=>{ if(s.typeId===tid) s.typeId=null; }); if(cal.stamp===tid) cal.stamp=null; save(); openJobs(); toast("パターンを削除しました。入れたシフトは残ります。"); } break;
   }
 });
+function quick5(){
+  if(timer.phase==="focus"&&started()) rightAction();
+  setPhase("quick",false); start(); toast("5分だけ。終わったらやめてもいい約束です。");
+}
 document.addEventListener("input",e=>{
   const el=e.target;
   if(["sh-start","sh-end","sh-break","sh-wage","sh-date"].includes(el.id)){
@@ -1214,6 +1364,13 @@ document.addEventListener("change",e=>{
     if(k==="vibrate"&&el.checked) buzz(VIB.tap);
     if(k==="sound"&&el.checked){ ensureAudio(); chime("breakEnd"); }
     if(k==="wake") syncWake();
+    if(k==="notify"&&el.checked){
+      const note=$("notify-note");
+      Notification.requestPermission().then(p=>{
+        if(p==="granted"){ note.textContent="オンにしました。ほかのアプリを見ている間も区切りを通知します。"; }
+        else { S().notify=false; el.checked=false; save(); note.textContent="通知が許可されませんでした。端末の設定 → アプリ → ConTodo → 通知 で許可してから、もう一度オンにしてください。"; }
+      }).catch(()=>{ S().notify=false; el.checked=false; save(); });
+    }
   }
 });
 document.addEventListener("submit",e=>{
@@ -1267,7 +1424,18 @@ document.addEventListener("submit",e=>{
 let lastDay=dayKey(Date.now());
 setInterval(()=>{ const k=dayKey(Date.now()); if(k!==lastDay){ lastDay=k; renderAll(); } },60000);
 
-setView(view); renderAll();
+/* ---------- 起動 ---------- */
+try{ history.replaceState({view:"timer"},""); }catch(e){}
+const params=new URLSearchParams(location.search);
+const startView=params.get("view")||view;
+setView("timer",true);
+renderAll();
+if(startView!=="timer"&&["tasks","cal","log"].includes(startView)) setView(startView);
+// ホーム画面アイコンの長押しメニュー（ショートカット）
+if(params.get("action")==="quick5") quick5();
+if(params.get("action")==="park"){ setTimeout(()=>{ openSheet("d-park"); $("park-input").focus(); },150); }
+if(location.search){ try{ history.replaceState(history.state,"",location.pathname); }catch(e){} }
+requestAnimationFrame(fitRing);
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 })();
 </script>
