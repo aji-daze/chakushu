@@ -661,8 +661,31 @@ const now0=new Date();
 let cal={y:now0.getFullYear(), m:now0.getMonth()+1, sel:dayKey(Date.now()), mode:"plan", stamp:null};
 try{ const c=JSON.parse(localStorage.getItem(CKEY)); if(c&&c.mode) cal.mode=c.mode; }catch(e){}
 
-function save(){ state.rev=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ toast("保存できませんでした。端末の空き容量を確認してください。"); } }
-const saveTimer=()=>{ try{ localStorage.setItem(TKEY,JSON.stringify(timer)); }catch(e){} };
+function save(){ state.rev=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){ toast("保存できませんでした。端末の空き容量を確認してください。"); } pushWidget(); }
+const saveTimer=()=>{ try{ localStorage.setItem(TKEY,JSON.stringify(timer)); }catch(e){} pushWidget(); };
+
+/* ---------- Androidアプリ版との連携（ブラウザ版では何もしない） ---------- */
+const native=()=>window.ConTodoNative||null;
+let widgetT=0;
+function pushWidget(){
+  const n=native(); if(!n||!n.update) return;
+  clearTimeout(widgetT);
+  widgetT=setTimeout(()=>{ try{ n.update(JSON.stringify(widgetSnapshot())); }catch(e){} },250);
+}
+// ウィジェットに渡す要約：テーマの色、タイマーの状態、今日の実績、前後の予定・シフト
+function widgetSnapshot(){
+  const cs=getComputedStyle(document.documentElement), theme={};
+  [["bg","--bg"],["surface","--surface"],["ink","--ink"],["ink2","--ink-2"],["ink3","--ink-3"],["line","--line"],["accent","--accent"],["rest","--rest"],["sun","--sun"],["sat","--sat"]].forEach(([k,v])=>{ theme[k]=cs.getPropertyValue(v).trim(); });
+  const todayK=dayKey(Date.now()), ts=state.sessions.filter(s=>dayKey(s.at)===todayK);
+  const lo=dayKey(Date.now()-40*DAY), hi=dayKey(Date.now()+75*DAY), days={};
+  const slot=k=>days[k]||(days[k]={s:[],e:0,l:[]});
+  state.shifts.forEach(s=>{ if(s.date<lo||s.date>hi) return; const j=jobById(s.jobId), d=slot(s.date), c=j?j.color:JOB_COLORS[0]; d.s.push(c); d.l.push([fmtT(s.start)+"–"+fmtT(s.end),j?j.name:"シフト",c,toMin(s.start)]); });
+  state.events.forEach(e=>{ if(e.date<lo||e.date>hi) return; const d=slot(e.date); d.e++; d.l.push([e.start?fmtT(e.start):"終日",e.title,"",e.start?toMin(e.start):-1]); });
+  Object.values(days).forEach(d=>{ d.l.sort((a,b)=>a[3]-b[3]); d.l=d.l.map(x=>x.slice(0,3)); });
+  return {v:1,ts:Date.now(),todayKey:todayK,theme,
+    timer:{phase:timer.phase,label:PHASE_LABEL[timer.phase],running:!!timer.running,endAt:timer.endAt||0,left:timer.left,total:timer.total,round:timer.round||0,every:S().every},
+    today:{pomos:ts.filter(s=>s.complete&&s.kind!=="quick").length,min:ts.reduce((a,s)=>a+s.min,0)},days};
+}
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 
 const curTask=()=>state.tasks.find(t=>t.id===state.currentId&&!t.done)||state.tasks.find(t=>!t.done)||null;
@@ -671,7 +694,11 @@ const isBreak=p=>p==="short"||p==="long";
 const phaseMin=p=>p==="quick"?5:p==="focus"?S().focus:p==="short"?S().short:S().long;
 const started=()=>timer.running||timer.left<timer.total;
 const visible=()=>document.visibilityState==="visible";
-function buzz(p){ if(!S().vibrate||!visible()) return false; try{ return navigator.vibrate?navigator.vibrate(p):false; }catch(e){ return false; } }
+function buzz(p){
+  if(!S().vibrate||!visible()) return false;
+  const n=native(); if(n&&n.vibrate){ try{ n.vibrate(p.join(",")); return true; }catch(e){} }
+  try{ return navigator.vibrate?navigator.vibrate(p):false; }catch(e){ return false; }
+}
 
 let audioCtx=null;
 function ensureAudio(){ try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); }catch(e){} }
@@ -1177,8 +1204,9 @@ function renderSettings(){
   if(S().notify&&"Notification" in window&&Notification.permission!=="granted") S().notify=false;
   ["autoBreak","autoFocus","vibrate","sound","notify","wake"].forEach(k=>{ $("s-"+k).checked=!!S()[k]; });
   document.querySelectorAll('[data-act="theme"]').forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S().theme)));
-  if(!("vibrate" in navigator)) $("vib-note").textContent="この端末は振動に対応していません（iPhoneは非対応）";
-  if(!("Notification" in window)){ $("s-notify").disabled=true; $("notify-note").textContent="この端末・ブラウザは通知に対応していません"; }
+  if(!native()&&!("vibrate" in navigator)) $("vib-note").textContent="この端末は振動に対応していません（iPhoneは非対応）";
+  if(native()){ $("s-notify").checked=true; $("s-notify").disabled=true; $("notify-note").textContent="アプリ版：画面を消していても、区切りで通知します"; }
+  else if(!("Notification" in window)){ $("s-notify").disabled=true; $("notify-note").textContent="この端末・ブラウザは通知に対応していません"; }
 }
 const darkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
 const THEME_META={light:"#F5F6F5",dark:"#111314",paper:"#F2EEE5",mauve:"#F3EEF3"};
@@ -1187,6 +1215,9 @@ function applyTheme(){
   if(t!=="auto") root.setAttribute("data-theme",t); else root.removeAttribute("data-theme");
   const dark=t==="auto"&&darkMQ&&darkMQ.matches;
   $("meta-theme").setAttribute("content",t==="auto"?(dark?THEME_META.dark:THEME_META.light):THEME_META[t]);
+  const n=native();
+  if(n&&n.setBars){ try{ n.setBars(getComputedStyle(root).getPropertyValue("--bg").trim()); }catch(e){} }
+  pushWidget();
 }
 if(darkMQ&&darkMQ.addEventListener) darkMQ.addEventListener("change",applyTheme);
 function applyIdleDuration(){ if(!started()){ const m=phaseMin(timer.phase); timer.total=timer.left=m*60; saveTimer(); renderTimerView(); } }
@@ -1194,6 +1225,8 @@ function renderAll(){ renderTimerView(); renderTasks(); if(view==="log") renderL
 
 async function exportData(){
   const name=`contodo-backup-${dayKey(Date.now())}.json`;
+  const nat=native();
+  if(nat&&nat.saveBackup){ try{ nat.saveBackup(name,JSON.stringify(state,null,1)); return; }catch(e){} }
   const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
   try{
     const file=new File([blob],name,{type:"application/json"});
@@ -1300,8 +1333,11 @@ document.addEventListener("click",e=>{
       S()[k]=Math.min(max,Math.max(min,S()[k]+step*Number(b.dataset.d))); $("o-"+k).textContent=S()[k]+u; save(); applyIdleDuration(); break; }
     case "test-vibrate": {
       const note=$("vib-test-note");
-      if(!("vibrate" in navigator)){ note.textContent="この端末は振動に対応していません。音と画面でお知らせします。"; break; }
-      let ok=false; try{ ok=navigator.vibrate(VIB.focusEnd); }catch(err){}
+      const nat=native();
+      if(!nat&&!("vibrate" in navigator)){ note.textContent="この端末は振動に対応していません。音と画面でお知らせします。"; break; }
+      let ok=false;
+      if(nat&&nat.vibrate){ try{ nat.vibrate(VIB.focusEnd.join(",")); ok=true; }catch(err){} }
+      else { try{ ok=navigator.vibrate(VIB.focusEnd); }catch(err){} }
       note.textContent=ok?"振動しましたか？ しない場合は、マナーモードや省電力の設定を確認してください。":"振動できませんでした。端末の設定を確認してください。";
       break; }
     case "theme": S().theme=b.dataset.v; save(); applyTheme(); renderSettings(); break;
@@ -1431,9 +1467,17 @@ const startView=params.get("view")||view;
 setView("timer",true);
 renderAll();
 if(startView!=="timer"&&["tasks","cal","log"].includes(startView)) setView(startView);
-// ホーム画面アイコンの長押しメニュー（ショートカット）
-if(params.get("action")==="quick5") quick5();
-if(params.get("action")==="park"){ setTimeout(()=>{ openSheet("d-park"); $("park-input").focus(); },150); }
+// ホーム画面アイコンの長押しメニュー・ウィジェットからの操作
+function conAction(a){
+  if(a==="start"){ setView("timer"); tick(); if(!timer.running) start(); }
+  else if(a==="quick5") quick5();
+  else if(a==="park"){ setTimeout(()=>{ openSheet("d-park"); $("park-input").focus(); },150); }
+  else if(a==="cal"||a==="today"){ const n=new Date(); cal.y=n.getFullYear(); cal.m=n.getMonth()+1; cal.sel=dayKey(Date.now()); cal.mode="plan"; saveCal(); setView("cal"); }
+  else if(a==="timer") setView("timer");
+}
+window.__conAction=conAction;
+if(params.get("action")) conAction(params.get("action"));
+applyTheme();
 if(location.search){ try{ history.replaceState(history.state,"",location.pathname); }catch(e){} }
 requestAnimationFrame(fitRing);
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
