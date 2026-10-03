@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
 <title>ConTodo</title>
-<meta name="description" content="やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み。">
+<meta name="description" content="やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み、家計簿。">
 <meta name="theme-color" content="#F5F6F5" id="meta-theme">
 <script>
 (function(){
@@ -190,6 +190,7 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .cal-month h2{font-family:var(--f-serif); font-weight:500; font-size:19px; margin:0 2px; letter-spacing:.03em; min-width:5.9em; text-align:center; white-space:nowrap}
 .nav{width:36px; height:40px; border-radius:50%; display:grid; place-items:center; color:var(--ink-2)}
 .nav svg{width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:1.6}
+.nav:disabled{opacity:.3; cursor:default}
 .seg{display:inline-grid; grid-auto-flow:column; border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; flex:none}
 .seg button{font-size:13px; color:var(--ink-2); border-radius:999px; padding:6px 12px; min-height:32px}
 .seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
@@ -268,10 +269,47 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .hint-list{margin:0; padding:0; list-style:none; font-size:13px; color:var(--ink-2)}
 .hint-list li{padding-block:8px; border-bottom:1px solid var(--line)}
 
+/* money（家計簿） */
+.kb-top{display:flex; align-items:center; justify-content:space-between; gap:10px; padding-block:14px 4px}
+.kb-total{font-family:var(--f-mono); font-weight:300; font-size:38px; line-height:1.15; font-variant-numeric:tabular-nums; margin:2px 0 0}
+.kb-sub{font-size:12px; color:var(--ink-3); margin:2px 0 0}
+.kb-meter{height:6px; border-radius:3px; margin-top:14px}
+.meter.near i{background:color-mix(in srgb, var(--danger) 55%, var(--accent))}
+.kb-bline{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 12px; font-size:12px; color:var(--ink-2); margin-top:6px}
+.kb-over{color:var(--danger)}
+.kb-link{font-size:12px; color:var(--accent); min-height:36px; text-decoration:underline; text-underline-offset:3px}
+.kb-cats{display:grid; gap:8px; margin-top:16px}
+.kb-cat{display:grid; grid-template-columns:6.4em minmax(0,1fr) auto; align-items:center; gap:10px; font-size:13px}
+.kb-cat span:first-child{display:flex; align-items:center; gap:6px; white-space:nowrap}
+.kb-bar{height:5px; background:var(--line); border-radius:3px; overflow:hidden}
+.kb-bar i{display:block; height:100%; border-radius:3px}
+.kb-cat .mono{font-size:12px; text-align:right; min-width:6em}
+.kb-cat small{color:var(--ink-3); margin-left:4px}
+.kb-actions{display:flex; flex-wrap:wrap; gap:8px; padding-block:18px 6px; border-bottom:1px solid var(--line)}
+.kb-actions a.act{text-decoration:none; display:inline-flex; align-items:center}
+.kb-day{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-3); padding-top:16px}
+.kb-row{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; width:100%; text-align:left; padding-block:12px; border-bottom:1px solid var(--line); min-height:52px}
+.kb-row b{font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.kb-row .mono{grid-row:span 2; align-self:center; font-size:15px}
+.kb-row small{display:flex; flex-wrap:wrap; gap:2px 10px; font-size:11px; color:var(--ink-3)}
+.kb-row small i{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; vertical-align:0}
+.kb-flag{color:var(--danger)}
+.kb-items{margin-top:14px; border-top:1px dashed var(--line)}
+.kb-item{display:grid; grid-template-columns:minmax(0,1fr) 6.2em 36px; gap:0 8px; align-items:end; padding-block:4px 8px; border-bottom:1px dashed var(--line)}
+.kb-item .inp{min-height:40px; padding:6px 0}
+.kb-item .p{text-align:right; font-family:var(--f-mono)}
+.kb-item select.inp{grid-column:1 / 3; font-size:13px; min-height:34px; width:auto; justify-self:start; padding-right:22px}
+.kb-item .x{color:var(--ink-3); font-size:16px; height:40px}
+.kb-add{width:100%; margin-top:8px; min-height:40px; border:1px dashed var(--line); border-radius:10px; font-size:13px; color:var(--accent)}
+.kb-sum{display:flex; justify-content:space-between; align-items:baseline; margin-top:12px; padding-top:10px; border-top:1.5px solid var(--ink); font-size:14px}
+.kb-sum .mono{font-size:22px}
+.top-links{display:flex; align-items:center}
+a.link{text-decoration:none; display:inline-flex; align-items:center}
+
 /* tab bar */
 .tabbar{flex:none; height:calc(var(--tabbar) + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom);
   background:var(--bg); border-top:1px solid var(--line); display:flex; justify-content:center}
-.tabbar-in{display:grid; grid-template-columns:repeat(4,1fr); width:100%; max-width:460px; padding-inline:12px}
+.tabbar-in{display:grid; grid-template-columns:repeat(5,1fr); width:100%; max-width:460px; padding-inline:8px}
 .tab{display:grid; place-items:center; align-content:center; gap:4px; font-size:12px; color:var(--ink-3); letter-spacing:.06em; min-width:0}
 .tab i{width:4px; height:4px; border-radius:50%; background:transparent}
 .tab[aria-current="page"]{color:var(--ink)}
@@ -333,7 +371,10 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
 <header class="top">
   <div class="top-in">
     <p class="wordmark">ConTodo</p>
-    <button class="link" data-act="open-settings">設定</button>
+    <div class="top-links">
+      <a class="link" href="/kb-cso/desk/" title="タイムラインとメモの作業画面">デスク</a>
+      <button class="link" data-act="open-settings">設定</button>
+    </div>
   </div>
 </header>
 
@@ -411,6 +452,10 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
     <div class="view-head"><h2>記録</h2><p>この端末に保存</p></div>
     <div id="log"></div>
   </section>
+
+  <section id="v-money" hidden aria-label="家計簿">
+    <div id="money"></div>
+  </section>
 </div>
 </main>
 
@@ -420,8 +465,16 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
     <button class="tab" data-view="tasks"><span>タスク</span><i></i></button>
     <button class="tab" data-view="cal"><span>カレンダー</span><i></i></button>
     <button class="tab" data-view="log"><span>記録</span><i></i></button>
+    <button class="tab" data-view="money"><span>家計</span><i></i></button>
   </div>
 </nav>
+
+<dialog id="d-receipt" aria-labelledby="rc-t">
+  <div class="grab"></div>
+  <p class="sheet-title" id="rc-t">支出</p>
+  <div id="rc-body"></div>
+</dialog>
+<input type="file" id="money-file" accept="application/json,.json" hidden>
 
 <dialog id="d-park" aria-labelledby="park-t">
   <div class="grab"></div>
@@ -644,6 +697,8 @@ function sampleState(){
 function migrate(s){
   s.settings={...DEFAULTS,...(s.settings||{})};
   ["tasks","sessions","parking","events","jobs","shiftTypes","shifts"].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
+  if(!s.money||typeof s.money!=="object") s.money={budget:0,receipts:[]};
+  if(!Array.isArray(s.money.receipts)) s.money.receipts=[];
   return s;
 }
 let state;
@@ -655,8 +710,9 @@ const S=()=>state.settings;
 let timer=null;
 try{ timer=JSON.parse(localStorage.getItem(TKEY)); }catch(e){}
 if(!timer||!timer.phase) timer={phase:"focus",total:S().focus*60,left:S().focus*60,endAt:0,running:false,round:0,distractions:0};
+const VIEWS=["timer","tasks","cal","log","money"];
 let view="timer"; try{ view=localStorage.getItem(VKEY)||"timer"; }catch(e){}
-if(!["timer","tasks","cal","log"].includes(view)) view="timer";
+if(!VIEWS.includes(view)) view="timer";
 const now0=new Date();
 let cal={y:now0.getFullYear(), m:now0.getMonth()+1, sel:dayKey(Date.now()), mode:"plan", stamp:null};
 try{ const c=JSON.parse(localStorage.getItem(CKEY)); if(c&&c.mode) cal.mode=c.mode; }catch(e){}
@@ -684,8 +740,33 @@ function widgetSnapshot(){
   Object.values(days).forEach(d=>{ d.l.sort((a,b)=>a[3]-b[3]); d.l=d.l.map(x=>x.slice(0,3)); });
   return {v:1,ts:Date.now(),todayKey:todayK,theme,
     timer:{phase:timer.phase,label:PHASE_LABEL[timer.phase],running:!!timer.running,endAt:timer.endAt||0,left:timer.left,total:timer.total,round:timer.round||0,every:S().every},
-    today:{pomos:ts.filter(s=>s.complete&&s.kind!=="quick").length,min:ts.reduce((a,s)=>a+s.min,0)},days};
+    today:{pomos:ts.filter(s=>s.complete&&s.kind!=="quick").length,min:ts.reduce((a,s)=>a+s.min,0)},days,
+    desk:deskSummary(),money:moneySummary()};
 }
+// DESK 向けウィジェット（今日の流れ・やること・集中）の要約。
+// DESK は同じオリジンなので、DESK 側の時間ブロックとタスクも localStorage から読んで合わせる
+const hhmm=m=>pad(Math.floor(m/60)%24)+":"+pad(m%60);
+function deskSummary(){
+  const k=dayKey(Date.now());
+  let ds=null, dv=null;
+  try{ ds=JSON.parse(localStorage.getItem("desk.snapshot")); }catch(e){}
+  try{ dv=JSON.parse(localStorage.getItem("desk.v1")); }catch(e){}
+  const blocks=[];
+  state.events.forEach(e=>{ if(e.date===k&&e.start) blocks.push({title:e.title,start:e.start,end:e.end||hhmm(toMin(e.start)+60),kind:"meet",src:"contodo"}); });
+  state.shifts.forEach(s=>{ if(s.date===k&&s.start){ const j=jobById(s.jobId); blocks.push({title:j?j.name:"シフト",start:s.start,end:s.end||hhmm(toMin(s.start)+60),kind:"work",src:"contodo"}); } });
+  // DESK の繰り返しブロックは DESK が展開済みの今日の分だけを使う
+  if(ds&&ds.at&&dayKey(ds.at)===k&&Array.isArray(ds.blocks)) ds.blocks.forEach(b=>{ if(b.src==="desk") blocks.push(b); });
+  blocks.sort((a,b)=>toMin(a.start)-toMin(b.start));
+  const undone=state.tasks.filter(t=>!t.done&&!t.sample);
+  const tasks=undone.map(t=>{ const s=nextStep(t); return {text:t.title,step:s?s.text:"",src:"contodo"}; });
+  const own=dv&&Array.isArray(dv.tasks)?dv.tasks.filter(t=>!t.done&&t.text):[];
+  own.forEach(t=>tasks.push({text:t.text,step:"",src:"desk"}));
+  const ts=state.sessions.filter(s=>dayKey(s.at)===k);
+  const set=(dv&&dv.settings)||{};
+  return {at:Date.now(),dayStart:set.dayStart||"09:00",dayEnd:set.dayEnd||"18:00",blocks,tasks:tasks.slice(0,8),remain:tasks.length,
+    focus:{min:ts.reduce((a,s)=>a+s.min,0),count:ts.filter(s=>s.complete).length,streak:streak()},running:!!timer.running};
+}
+window.addEventListener("storage",e=>{ if(e.key==="desk.v1"||e.key==="desk.snapshot") pushWidget(); });
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 
 const curTask=()=>state.tasks.find(t=>t.id===state.currentId&&!t.done)||state.tasks.find(t=>!t.done)||null;
@@ -740,11 +821,12 @@ function pushNav(st){ try{ history.pushState(st,""); }catch(e){} }
 function navBack(){ if(backPending) return; backPending=true; history.back(); setTimeout(()=>{ backPending=false; },800); }
 function setView(v,fromPop){
   view=v; try{ localStorage.setItem(VKEY,v); }catch(e){}
-  ["timer","tasks","cal","log"].forEach(k=>{ $("v-"+k).hidden=k!==v; });
+  VIEWS.forEach(k=>{ $("v-"+k).hidden=k!==v; });
   scroller.dataset.screen=v;
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current",t.dataset.view===v?"page":"false"));
   if(v!=="cal") cal.stamp=null;
   if(v==="log") renderLog();
+  if(v==="money") renderMoney();
   if(v==="cal") renderCal();
   if(v==="timer") requestAnimationFrame(fitRing);
   scroller.scrollTop=0;
@@ -1196,6 +1278,156 @@ function renderLog(){
       </ul></div>`;
 }
 
+/* ================= money（家計簿） ================= */
+// レシート写真は claude.ai の家計簿で撮りため、読み取った結果を「ConTodo用に書き出す」→ ここで「取り込む」。
+// 手入力はここで完結する。データは state.money に入り、バックアップにも含まれる
+const CATS=["食費","外食","日用品","交通","衣服・美容","趣味・娯楽","医療・健康","その他"];
+const CAT_COLORS=["#2F8A6B","#C4622D","#3A6FB0","#7A5AB5","#C24C7A","#B58A12","#2E97A6","#7D8783"];
+const catColor=c=>CAT_COLORS[CATS.indexOf(c)]||CAT_COLORS[7];
+const KAKEIBO_URL="https://claude.ai/artifact/53MhRuvLRo9hQ9R9HrVW1S";
+const sumItems=items=>(items||[]).reduce((a,it)=>a+(Number(it.price)||0),0);
+const yenS=n=>(n<0?"−¥":"¥")+Math.abs(Math.round(n||0)).toLocaleString("ja-JP");
+const thisYM=()=>dayKey(Date.now()).slice(0,7);
+const shiftYM=(ym,k)=>{ const [y,m]=ym.split("-").map(Number), d=new Date(y,m-1+k,1); return d.getFullYear()+"-"+pad(d.getMonth()+1); };
+let money={ym:thisYM(), editBudget:false}, draft=null, lastCat="食費";
+function monthStats(ym){
+  const rs=state.money.receipts.filter(r=>r.date&&r.date.slice(0,7)===ym), byCat={};
+  let total=0;
+  rs.forEach(r=>(r.items||[]).forEach(it=>{ const p=Number(it.price)||0; total+=p; byCat[it.category]=(byCat[it.category]||0)+p; }));
+  return {rs,total,cats:Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])};
+}
+function budgetInfo(ym,total){
+  const b=Number(state.money.budget)||0; if(!b) return null;
+  const left=b-total, n=new Date(), last=new Date(n.getFullYear(),n.getMonth()+1,0).getDate();
+  const days=ym===thisYM()?last-n.getDate()+1:0;
+  return {b,left,pct:total/b,days,perDay:days&&left>0?Math.floor(left/days):0};
+}
+function moneySummary(){
+  const ym=thisYM(), st=monthStats(ym), bi=budgetInfo(ym,st.total);
+  return {ym,total:st.total,count:st.rs.length,budget:bi?bi.b:0,left:bi?bi.left:0,days:bi?bi.days:0,perDay:bi?bi.perDay:0,
+    cats:st.cats.slice(0,3).map(([c,v])=>[c,v,catColor(c)])};
+}
+function renderMoney(){
+  const ym=money.ym, [y,m]=ym.split("-").map(Number), cur=ym===thisYM();
+  const {rs,total,cats}=monthStats(ym), prev=monthStats(shiftYM(ym,-1)).total, bi=budgetInfo(ym,total);
+  let budget;
+  if(money.editBudget) budget=`<form class="field" id="budget-form" style="margin-top:12px"><input type="number" inputmode="numeric" min="0" step="1000" id="budget-input" class="mono" value="${state.money.budget||""}" placeholder="月の予算（円）"><button type="submit">保存</button></form>`;
+  else if(bi){
+    const cls=bi.pct>1?"over":bi.pct>.85?"near":"";
+    const right=bi.left<0?`<span class="kb-over">予算を <span class="mono">${yenS(-bi.left)}</span> 超えています</span>`:bi.days?`<span>あと${bi.days}日 ・ 1日 <span class="mono">${yenS(bi.perDay)}</span> まで</span>`:"";
+    budget=`<div class="meter kb-meter ${cls}"><i style="width:${Math.min(100,bi.pct*100).toFixed(1)}%"></i></div>
+      <div class="kb-bline"><span>予算 <span class="mono">${yenS(bi.b)}</span> ・ 残り <span class="mono">${yenS(Math.max(0,bi.left))}</span></span>${right}</div>
+      <button class="kb-link" data-act="budget-edit">予算を変える</button>`;
+  } else budget=`<button class="kb-link" data-act="budget-edit">月の予算を決める</button>`;
+  const max=cats.length?cats[0][1]:1;
+  const catHtml=cats.length?`<div class="kb-cats">${cats.map(([c,v])=>`<div class="kb-cat"><span><i class="swatch" style="background:${catColor(c)}"></i>${esc(c)}</span>
+    <span class="kb-bar"><i style="width:${(v/max*100).toFixed(1)}%;background:${catColor(c)}"></i></span>
+    <span class="mono">${yenS(v)}<small>${total>0?Math.round(v/total*100):0}%</small></span></div>`).join("")}</div>`:"";
+  const groups=new Map();
+  [...rs].sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0)).forEach(r=>{ if(!groups.has(r.date)) groups.set(r.date,[]); groups.get(r.date).push(r); });
+  const list=groups.size?[...groups].map(([date,g])=>{ const p=parseKey(date);
+    return `<div class="kb-day"><span>${p.m}月${p.d}日（${WD[p.date.getDay()]}）</span><span class="mono">${yenS(g.reduce((a,r)=>a+sumItems(r.items),0))}</span></div>`+
+      g.map(r=>{ const cs=[...new Set((r.items||[]).map(i=>i.category))];
+        return `<button class="kb-row" data-act="rc-open" data-id="${esc(r.id)}"><b>${esc(r.store)}</b><span class="mono">${yenS(sumItems(r.items))}</span>
+          <small>${r.needsReview?'<span class="kb-flag">要確認</span>':""}${cs.map(c=>`<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join("")}<span>${(r.items||[]).length}品目</span></small></button>`; }).join("");
+  }).join(""):`<p class="empty">この月の記録はまだありません。「手入力」で入れるか、claude.ai の家計簿で読み取ったレシートを「取り込む」で入れます。</p>`;
+  $("money").innerHTML=`
+    <div class="kb-top">
+      <div class="cal-month">
+        <button class="nav" data-act="mo-prev" aria-label="前の月"><svg viewBox="0 0 12 12"><path d="M8 1.5 3.5 6 8 10.5"/></svg></button>
+        <h2>${y}年${m}月</h2>
+        <button class="nav" data-act="mo-next" aria-label="次の月"${cur?" disabled":""}><svg viewBox="0 0 12 12"><path d="M4 1.5 8.5 6 4 10.5"/></svg></button>
+      </div>
+    </div>
+    <p class="eyebrow">${cur?"今月":m+"月"}の支出</p>
+    <p class="kb-total">${yenS(total)}</p>
+    <p class="kb-sub">${rs.length}件${prev?` ・ 先月 <span class="mono">${yenS(prev)}</span>`:""}</p>
+    ${budget}${catHtml}
+    <div class="kb-actions">
+      <button class="act primary" data-act="rc-new">＋ 手入力</button>
+      <a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>
+      <button class="act" data-act="mo-import">取り込む</button>
+      ${rs.length?'<button class="act" data-act="mo-csv">CSV</button>':""}
+    </div>
+    ${list}`;
+  const bi2=$("budget-input"); if(bi2) bi2.focus();
+}
+const blankItem=()=>({name:"",price:"",category:lastCat});
+function openReceipt(id){
+  const r=id?state.money.receipts.find(x=>x.id===id):null;
+  draft=r?JSON.parse(JSON.stringify(r)):{id:null,store:"",date:dayKey(Date.now()),items:[blankItem()]};
+  if(!draft.items||!draft.items.length) draft.items=[blankItem()];
+  renderReceipt(); openSheet("d-receipt");
+}
+function renderReceipt(){
+  const d=draft, opts=sel=>CATS.map(c=>`<option${c===sel?" selected":""}>${c}</option>`).join("");
+  $("rc-t").textContent=d.id?"支出を編集":"支出を入れる";
+  $("rc-body").innerHTML=`
+    ${d.needsReview?`<p class="msg">${esc(d.reviewNote||"読み取った金額とレシートの支払額が合っていません。レシートと見比べて直してください。")}</p>`:""}
+    <div class="frm">
+      <div class="two">
+        <div class="frm"><label for="rc-store">店名</label><input class="inp" type="text" id="rc-store" data-rf="store" value="${esc(d.store)}" placeholder="例：まいばすけっと" autocomplete="off"></div>
+        <div class="frm"><label for="rc-date">日付</label><input class="inp" type="date" id="rc-date" data-rf="date" value="${esc(d.date)}"></div>
+      </div>
+    </div>
+    <div class="kb-items">${d.items.map((it,i)=>`<div class="kb-item">
+      <input class="inp" type="text" data-ri="${i}" data-rk="name" value="${esc(it.name)}" placeholder="品名" aria-label="品名" autocomplete="off">
+      <input class="inp p" inputmode="numeric" data-ri="${i}" data-rk="price" value="${esc(it.price)}" placeholder="0" aria-label="金額（円）">
+      <button class="x" data-act="rc-del-item" data-i="${i}" aria-label="この行を消す">×</button>
+      <select class="inp" data-ri="${i}" data-rk="category" aria-label="カテゴリ">${opts(it.category)}</select>
+    </div>`).join("")}</div>
+    <button class="kb-add" data-act="rc-add-item">＋ 品目を追加</button>
+    <div class="kb-sum"><span>合計</span><span class="mono" id="rc-sum">${yenS(sumItems(d.items))}</span></div>
+    <p class="fine">値引きはマイナスの金額で入れます（例：-50）。</p>
+    <div class="sheet-actions">
+      ${d.id?'<button type="button" class="act danger" data-act="rc-del">削除</button>':""}
+      <button type="button" class="done-btn" data-act="rc-save">保存</button>
+    </div>`;
+}
+function saveReceipt(){
+  const d=draft; if(!d) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||"")){ toast("日付を入れてください。"); return; }
+  const items=d.items.filter(it=>String(it.price).trim()!==""&&!isNaN(Number(it.price)))
+    .map(it=>({name:String(it.name||"").trim()||"品目",price:Math.round(Number(it.price)),category:CATS.includes(it.category)?it.category:"その他"}));
+  if(!items.length){ toast("金額を1つ以上入れてください。"); return; }
+  const now=Date.now(), old=d.id?state.money.receipts.find(x=>x.id===d.id):null;
+  const r={...(old||{}),id:d.id||"ct"+uid(),date:d.date,store:String(d.store||"").trim()||"（店名なし）",items,total:sumItems(items),
+    method:old?old.method:"manual",createdAt:old&&old.createdAt||now,updatedAt:now};
+  delete r.needsReview; delete r.reviewNote;
+  state.money.receipts=state.money.receipts.filter(x=>x.id!==r.id).concat([r]);
+  money.ym=r.date.slice(0,7); save(); closeSheet("d-receipt"); draft=null; renderMoney(); toast(old?"更新しました。":"入れました。");
+}
+// claude.ai の家計簿から書き出したファイルを取り込む。同じレシートは上書きするので、何度取り込んでも重ならない
+$("money-file").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const d=JSON.parse(await f.text());
+    const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:null; if(!list) throw 0;
+    let add=0, upd=0;
+    list.forEach(x=>{
+      if(!x||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")||!Array.isArray(x.items)) return;
+      const id="kb-"+String(x.id||uid()), items=x.items.map(it=>({name:String(it.name||"品目"),price:Math.round(Number(it.price)||0),category:CATS.includes(it.category)?it.category:"その他"}));
+      const r={id,date:x.date,store:String(x.store||"（店名なし）"),items,total:sumItems(items),method:x.method||"receipt",
+        createdAt:Number(x.createdAt)||Date.now(),updatedAt:Number(x.updatedAt)||Date.now()};
+      if(x.needsReview){ r.needsReview=true; if(x.reviewNote) r.reviewNote=String(x.reviewNote); }
+      const i=state.money.receipts.findIndex(y=>y.id===id);
+      if(i<0){ state.money.receipts.push(r); add++; }
+      else if((state.money.receipts[i].updatedAt||0)<=r.updatedAt){ state.money.receipts[i]=r; upd++; }
+    });
+    if(d&&!Array.isArray(d)&&Number(d.budget)>0&&!state.money.budget) state.money.budget=Number(d.budget);
+    save(); renderMoney(); toast(`取り込みました（新しく${add}件・更新${upd}件）。`);
+  }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったファイルを選んでください。"); }
+});
+function exportMoneyCSV(){
+  const cell=v=>{ const s=String(v==null?"":v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  const rows=[["日付","店名","品目","カテゴリ","金額"]];
+  monthStats(money.ym).rs.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>(r.items||[]).forEach(it=>rows.push([r.date,r.store,it.name,it.category,it.price])));
+  const name=`家計簿-${money.ym}.csv`, body="﻿"+rows.map(r=>r.map(cell).join(",")).join("\r\n"), nat=native();
+  if(nat&&nat.saveFile){ try{ nat.saveFile(name,"text/csv",body); return; }catch(e){} }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([body],{type:"text/csv"})); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+}
+
 /* ================= settings ================= */
 const NUMS=[["focus","集中","分",5,60,5],["short","小休憩","分",1,15,1],["long","長い休憩","分",5,40,5],["every","長い休憩までの回数","回",2,8,1]];
 function renderSettings(){
@@ -1221,7 +1453,7 @@ function applyTheme(){
 }
 if(darkMQ&&darkMQ.addEventListener) darkMQ.addEventListener("change",applyTheme);
 function applyIdleDuration(){ if(!started()){ const m=phaseMin(timer.phase); timer.total=timer.left=m*60; saveTimer(); renderTimerView(); } }
-function renderAll(){ renderTimerView(); renderTasks(); if(view==="log") renderLog(); if(view==="cal") renderCal(); }
+function renderAll(){ renderTimerView(); renderTasks(); if(view==="log") renderLog(); if(view==="cal") renderCal(); if(view==="money") renderMoney(); }
 
 async function exportData(){
   const name=`contodo-backup-${dayKey(Date.now())}.json`;
@@ -1373,6 +1605,18 @@ document.addEventListener("click",e=>{
     case "del-job": if(armBtn(b)){ const jid=$("j-id").value;
       state.jobs=state.jobs.filter(x=>x.id!==jid); state.shiftTypes=state.shiftTypes.filter(t=>t.jobId!==jid); state.shifts=state.shifts.filter(s=>s.jobId!==jid); cal.stamp=null;
       save(); openJobs(); if(view==="cal") renderCal(); renderTodayPlan(); toast("勤務先と、そのシフトを削除しました。"); } break;
+    /* money */
+    case "mo-prev": money.ym=shiftYM(money.ym,-1); money.editBudget=false; renderMoney(); break;
+    case "mo-next": if(money.ym<thisYM()){ money.ym=shiftYM(money.ym,1); money.editBudget=false; renderMoney(); } break;
+    case "budget-edit": money.editBudget=true; renderMoney(); break;
+    case "mo-import": $("money-file").click(); break;
+    case "mo-csv": exportMoneyCSV(); break;
+    case "rc-new": openReceipt(null); break;
+    case "rc-open": openReceipt(id); break;
+    case "rc-add-item": if(draft){ draft.items.push(blankItem()); renderReceipt(); const n=document.querySelectorAll('#rc-body [data-rk="name"]'); if(n.length) n[n.length-1].focus(); } break;
+    case "rc-del-item": if(draft){ draft.items.splice(Number(b.dataset.i),1); if(!draft.items.length) draft.items.push(blankItem()); renderReceipt(); } break;
+    case "rc-save": saveReceipt(); break;
+    case "rc-del": if(draft&&armBtn(b)){ state.money.receipts=state.money.receipts.filter(x=>x.id!==draft.id); draft=null; save(); closeSheet("d-receipt"); renderMoney(); toast("削除しました。"); } break;
     case "del-type": if(armBtn(b)){ const tid=$("t-id").value; state.shiftTypes=state.shiftTypes.filter(x=>x.id!==tid); state.shifts.forEach(s=>{ if(s.typeId===tid) s.typeId=null; }); if(cal.stamp===tid) cal.stamp=null; save(); openJobs(); toast("パターンを削除しました。入れたシフトは残ります。"); } break;
   }
 });
@@ -1387,6 +1631,16 @@ document.addEventListener("input",e=>{
     updateShiftPreview();
   }
   if(el.id==="jm-line"){ S().incomeLine=Math.max(0,Number(el.value)||0); save(); }
+  if(draft&&el.dataset){
+    if(el.dataset.rf) draft[el.dataset.rf]=el.value;
+    else if(el.dataset.rk){
+      const it=draft.items[Number(el.dataset.ri)]; if(!it) return;
+      if(el.dataset.rk==="price"){ el.value=el.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[−ー－]/g,"-").replace(/[^\d-]/g,""); it.price=el.value; }
+      else it[el.dataset.rk]=el.value;
+      if(el.dataset.rk==="category") lastCat=el.value;
+      const s=$("rc-sum"); if(s) s.textContent=yenS(sumItems(draft.items));
+    }
+  }
 });
 document.addEventListener("change",e=>{
   const el=e.target;
@@ -1411,7 +1665,9 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("submit",e=>{
   e.preventDefault(); const f=e.target;
-  if(f.id==="task-form"){
+  if(f.id==="budget-form"){
+    state.money.budget=Math.max(0,Math.round(Number($("budget-input").value)||0)); money.editBudget=false; save(); renderMoney(); toast(state.money.budget?"予算を決めました。":"予算を外しました。");
+  } else if(f.id==="task-form"){
     const inp=$("task-input"), v=inp.value.trim(); if(!v) return;
     const t={id:uid(),title:v,done:false,steps:[],createdAt:Date.now()};
     state.tasks.push(t); const ct=curTask(); if(!ct||ct.sample) state.currentId=t.id;
@@ -1466,7 +1722,7 @@ const params=new URLSearchParams(location.search);
 const startView=params.get("view")||view;
 setView("timer",true);
 renderAll();
-if(startView!=="timer"&&["tasks","cal","log"].includes(startView)) setView(startView);
+if(startView!=="timer"&&VIEWS.includes(startView)) setView(startView);
 // ホーム画面アイコンの長押しメニュー・ウィジェットからの操作
 function conAction(a){
   if(a==="start"){ setView("timer"); tick(); if(!timer.running) start(); }
@@ -1474,6 +1730,10 @@ function conAction(a){
   else if(a==="park"){ setTimeout(()=>{ openSheet("d-park"); $("park-input").focus(); },150); }
   else if(a==="cal"||a==="today"){ const n=new Date(); cal.y=n.getFullYear(); cal.m=n.getMonth()+1; cal.sel=dayKey(Date.now()); cal.mode="plan"; saveCal(); setView("cal"); }
   else if(a==="timer") setView("timer");
+  else if(a==="tasks") setView("tasks");
+  else if(a==="money"){ money.ym=thisYM(); setView("money"); }
+  else if(a==="spend"){ setView("money"); setTimeout(()=>openReceipt(null),150); }
+  else if(a==="desk") location.href="/kb-cso/desk/";
 }
 window.__conAction=conAction;
 if(params.get("action")) conAction(params.get("action"));

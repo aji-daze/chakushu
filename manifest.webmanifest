@@ -1,7 +1,7 @@
 {
   "name": "ConTodo",
   "short_name": "ConTodo",
-  "description": "やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み。",
+  "description": "やる気を待たずに一歩目から始める。ポモドーロ、小さな一歩、カレンダーとシフト給与の見込み、家計簿。",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
@@ -10,13 +10,73 @@
   "background_color": "#F5F6F5",
   "theme_color": "#F5F6F5",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "5分だけやってみる", "short_name": "5分だけ", "url": "./?action=quick5", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "脇道メモ", "short_name": "脇道メモ", "url": "./?action=park", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "カレンダー", "short_name": "カレンダー", "url": "./?view=cal", "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+    {
+      "name": "5分だけやってみる",
+      "short_name": "5分だけ",
+      "url": "./?action=quick5",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "脇道メモ",
+      "short_name": "脇道メモ",
+      "url": "./?action=park",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "カレンダー",
+      "short_name": "カレンダー",
+      "url": "./?view=cal",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "支出を入れる",
+      "short_name": "支出",
+      "url": "./?action=spend",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }
