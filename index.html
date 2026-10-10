@@ -342,6 +342,8 @@ dialog.dx-run .grab{display:none}
   background:var(--bg); border-top:1px solid var(--line); display:flex; justify-content:center}
 .tabbar-in{display:grid; grid-template-columns:repeat(5,1fr); width:100%; max-width:460px; padding-inline:8px}
 .tab{display:grid; place-items:center; align-content:center; gap:4px; font-size:12px; color:var(--ink-3); letter-spacing:.06em; min-width:0}
+.tab span{white-space:nowrap}
+@media (max-width:360px){ .tab{font-size:11px; letter-spacing:0} }
 .tab i{width:4px; height:4px; border-radius:50%; background:transparent}
 .tab[aria-current="page"]{color:var(--ink)}
 .tab[aria-current="page"] i{background:var(--ink)}
@@ -1503,12 +1505,14 @@ function dxRefresh(force){
   if(!force&&Date.now()-dxu.at<20000) return;
   dxu.busy=true; dxu.at=Date.now();
   setTimeout(()=>{
+    const was=dxu.access;
     try{
       dxu.access=!!n.usageAccess();
       if(dxu.access){ const r=JSON.parse(n.usageSummary()); if(r&&r.ok){ dxu.today=r.today; dxu.days=r.days||[]; } }
       else { dxu.today=null; dxu.days=[]; }
     }catch(e){ dxu.access=false; }
     dxu.busy=false;
+    if(was!==dxu.access) dxPushConfig();   // 許可された（取り消された）ら、見守りの予約を付け直す
     if(view==="log"&&logMode==="detox") renderLog();
     if(view==="timer") renderTimerView();
   },30);
