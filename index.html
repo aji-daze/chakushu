@@ -306,6 +306,37 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .top-links{display:flex; align-items:center}
 a.link{text-decoration:none; display:inline-flex; align-items:center}
 
+/* detox（デジタルデトックス） */
+.dx-seg{display:flex; justify-content:flex-end; padding-block:0 12px}
+.dx-card{border:1px solid var(--line); border-radius:14px; padding:16px; margin-block:0 14px}
+.dx-big{font-family:var(--f-mono); font-weight:300; font-size:34px; line-height:1.2; font-variant-numeric:tabular-nums; margin:2px 0 0}
+.dx-big small{font-family:var(--f-body); font-size:13px; color:var(--ink-2); margin-left:4px}
+.dx-sub{font-size:12px; color:var(--ink-3); margin:4px 0 0; line-height:1.6}
+.dx-note{font-size:13px; color:var(--ink-2); margin:6px 0 0; line-height:1.7}
+.dx-over{color:var(--danger)}
+.dx-apps{display:grid; gap:8px; margin-top:14px}
+.dx-app{display:grid; grid-template-columns:minmax(0,7.5em) minmax(0,1fr) auto; gap:10px; align-items:center; font-size:13px}
+.dx-app > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dx-bar{height:5px; border-radius:3px; background:var(--line); overflow:hidden}
+.dx-bar i{display:block; height:100%; background:var(--accent)}
+.dx-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:6px}
+.dx-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.dx-chips .chip{min-height:36px}
+.dx-btns{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+.dx-btn{border:1px solid var(--line); border-radius:12px; padding:12px 8px; min-height:60px; font-size:14px; text-align:center; line-height:1.5}
+.dx-btn.good{border-color:var(--rest); color:var(--rest)}
+.dx-btn.soft{color:var(--ink-2)}
+.dx-len{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px}
+.dx-len .chip{min-height:44px; padding-inline:18px; font-size:14px}
+dialog.dx-run{margin:0; max-width:none; width:100%; height:100%; max-height:none; border-radius:0; background:#0A0B0C; color:#C9CDCB; padding:24px; text-align:center}
+dialog.dx-run[open]{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px}
+dialog.dx-run .grab{display:none}
+.dx-quiet{font-family:var(--f-serif); letter-spacing:.3em; font-size:13px; color:#8C9391; margin:0}
+.dx-count{font-family:var(--f-mono); font-weight:300; font-size:clamp(52px,18vw,76px); line-height:1.1; margin:0; color:#E3E6E4; font-variant-numeric:tabular-nums}
+.dx-msg{font-size:13px; line-height:1.9; color:#8C9391; max-width:20em; margin:0}
+.dx-stop{margin-top:28px; font-size:13px; color:#8C9391; border:1px solid #2A2E30; border-radius:999px; padding:10px 24px; min-height:44px}
+.dx-stop.armed{border-color:#A5473A; color:#E28C7D}
+
 /* tab bar */
 .tabbar{flex:none; height:calc(var(--tabbar) + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom);
   background:var(--bg); border-top:1px solid var(--line); display:flex; justify-content:center}
@@ -412,6 +443,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
       <div class="quick">
         <button data-act="quick5">5分だけやってみる</button>
         <button data-act="open-park">脇道メモ</button>
+        <button data-act="dx-open">スマホを置く</button>
       </div>
     </div>
   </section>
@@ -600,6 +632,11 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   </form>
 </dialog>
 
+<dialog id="d-detox" aria-labelledby="dx-t">
+  <div class="grab"></div>
+  <div id="dx-body"></div>
+</dialog>
+
 <dialog id="d-settings" aria-labelledby="set-t">
   <div class="grab"></div>
   <p class="sheet-title" id="set-t">設定</p>
@@ -625,6 +662,13 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   <div class="set"><div class="set-l"><label for="s-wake">画面をつけたままにする</label><small id="wake-note">タイマー中は画面を消さない（対応端末のみ）</small></div><input type="checkbox" class="switch" id="s-wake"></div>
   <p class="group-label">シフトと給与</p>
   <div class="set"><div class="set-l"><span>勤務先とシフトパターン</span><small>時給・締め日・給料日・深夜手当</small></div><button class="act" data-act="open-jobs">編集</button></div>
+  <p class="group-label">デジタルデトックス</p>
+  <div class="set"><div class="set-l"><span>1日の画面時間の目標</span><small id="dx-goal-note">画面時間と見くらべます（アプリ版）</small></div>
+    <div class="stepper"><button data-act="dx-goal" data-d="-1" aria-label="目標を減らす">−</button><output class="mono" id="dx-goal-o">3時間</output><button data-act="dx-goal" data-d="1" aria-label="目標を増やす">＋</button></div></div>
+  <div class="set"><div class="set-l"><label for="dx-nudge">目標に近づいたら知らせる</label><small id="dx-nudge-note">8割に達したときと、目標に届いたときに通知します（アプリ版）</small></div><input type="checkbox" class="switch" id="dx-nudge"></div>
+  <div class="set"><div class="set-l"><label for="dx-bed-on">寝る前のお知らせ</label><small id="dx-bed-note">決めた時刻に「そろそろ置く時間」と知らせます（アプリ版）</small></div><input type="checkbox" class="switch" id="dx-bed-on"></div>
+  <div class="set"><div class="set-l"><label for="dx-bed">お知らせの時刻</label></div><input class="inp mono" style="max-width:7em; text-align:right" type="time" id="dx-bed"></div>
+  <div class="set"><div class="set-l"><span>使用状況へのアクセス</span><small id="dx-acc-note">画面時間を数えるために必要です。端末の中だけで集計します（アプリ版）</small></div><button class="act" data-act="dx-grant" id="dx-acc-btn">許可する</button></div>
   <p class="group-label">データ</p>
   <div class="set"><div class="set-l"><span>バックアップを書き出す</span><small>機種変更やアプリの削除に備えて保存</small></div><button class="act" data-act="export">書き出す</button></div>
   <div class="set"><div class="set-l"><span>バックアップから戻す</span><small id="import-note">書き出したファイルを読み込む（今のデータは置き換わります）</small></div><button class="act" data-act="import">読み込む</button></div>
@@ -699,6 +743,9 @@ function migrate(s){
   ["tasks","sessions","parking","events","jobs","shiftTypes","shifts"].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
   if(!s.money||typeof s.money!=="object") s.money={budget:0,receipts:[]};
   if(!Array.isArray(s.money.receipts)) s.money.receipts=[];
+  s.detox={goal:180,nudge:true,bedOn:false,bed:"23:00",len:30,...(s.detox&&typeof s.detox==="object"?s.detox:{})};
+  ["placed","urges"].forEach(k=>{ if(!Array.isArray(s.detox[k])) s.detox[k]=[]; });
+  if(!s.detox.session||typeof s.detox.session!=="object"||!s.detox.session.endAt) s.detox.session=null;
   return s;
 }
 let state;
@@ -741,7 +788,7 @@ function widgetSnapshot(){
   return {v:1,ts:Date.now(),todayKey:todayK,theme,
     timer:{phase:timer.phase,label:PHASE_LABEL[timer.phase],running:!!timer.running,endAt:timer.endAt||0,left:timer.left,total:timer.total,round:timer.round||0,every:S().every},
     today:{pomos:ts.filter(s=>s.complete&&s.kind!=="quick").length,min:ts.reduce((a,s)=>a+s.min,0)},days,
-    desk:deskSummary(),money:moneySummary()};
+    desk:deskSummary(),money:moneySummary(),detox:detoxSummary()};
 }
 // DESK 向けウィジェット（今日の流れ・やること・集中）の要約。
 // DESK は同じオリジンなので、DESK 側の時間ブロックとタスクも localStorage から読んで合わせる
@@ -828,7 +875,7 @@ function setView(v,fromPop){
   if(v==="log") renderLog();
   if(v==="money") renderMoney();
   if(v==="cal") renderCal();
-  if(v==="timer") requestAnimationFrame(fitRing);
+  if(v==="timer"){ renderTimerView(); requestAnimationFrame(fitRing); }
   scroller.scrollTop=0;
   if(!fromPop){
     const st=history.state||{};
@@ -906,7 +953,7 @@ function renderTimerView(){
   $("dots").innerHTML=dots;
   const k=dayKey(Date.now()), todays=state.sessions.filter(s=>dayKey(s.at)===k);
   const pomos=todays.filter(s=>s.complete&&s.kind!=="quick").length, mins=todays.reduce((a,s)=>a+s.min,0);
-  $("today-line").textContent=`今日 ${pomos}ポモドーロ ・ ${mins}分`;
+  $("today-line").textContent=`今日 ${pomos}ポモドーロ ・ ${mins}分${dxLine()}`;
   renderControls(); tick();
 }
 function renderControls(){
@@ -978,7 +1025,7 @@ function rightAction(){
   setPhase("focus",false);
 }
 setInterval(()=>{ if(timer.running) tick(); },250);
-document.addEventListener("visibilitychange",()=>{ if(visible()){ tick(); syncWake(); clearNotifications(); } });
+document.addEventListener("visibilitychange",()=>{ if(visible()){ tick(); syncWake(); clearNotifications(); dxTick(); dxRefresh(true); } });
 
 /* ================= tasks ================= */
 const openRows=new Set(); let armed=null, rowsInit=false;
@@ -1240,6 +1287,8 @@ const STROKES=[[3,4,21,4],[12,4,12,21],[12,12.5,19,12.5],[6,11,6,21],[2,21,22,21
 const tallySVG=n=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+STROKES.slice(0,n).map(s=>`<line x1="${s[0]}" y1="${s[1]}" x2="${s[2]}" y2="${s[3]}"></line>`).join("")+"</svg>";
 function streak(){ const days=new Set(state.sessions.map(s=>dayKey(s.at))); let d=Date.now(),n=0; if(!days.has(dayKey(d))) d-=DAY; while(days.has(dayKey(d))){n++; d-=DAY;} return n; }
 function renderLog(){
+  const seg=`<div class="dx-seg"><div class="seg" role="group" aria-label="記録の種類"><button data-act="log-mode" data-v="focus" aria-pressed="${logMode==="focus"}">集中</button><button data-act="log-mode" data-v="detox" aria-pressed="${logMode==="detox"}">デトックス</button></div></div>`;
+  if(logMode==="detox"){ $("log").innerHTML=seg+detoxHTML(); return; }
   const now=Date.now(), k=dayKey(now);
   const todays=state.sessions.filter(s=>dayKey(s.at)===k);
   const tMin=todays.reduce((a,s)=>a+s.min,0), full=todays.filter(s=>s.complete).length;
@@ -1258,7 +1307,7 @@ function renderLog(){
     if(i===0||i===7||isT) g+=`<text x="${cx}" y="${H-6}" text-anchor="${isT?"end":i===0?"start":"middle"}">${isT?"今日":(d.d.getMonth()+1)+"/"+d.d.getDate()}</text>`;
   });
   const total=days.reduce((a,d)=>a+d.min,0), active=days.filter(d=>d.min>0).length;
-  $("log").innerHTML=`
+  $("log").innerHTML=seg+`
     <div class="kpis">
       <div class="kpi"><b>${tMin}<small>分</small></b><span>今日</span></div>
       <div class="kpi"><b>${streak()}<small>日</small></b><span>連続</span></div>
@@ -1428,6 +1477,160 @@ function exportMoneyCSV(){
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
 }
 
+/* ================= detox（デジタルデトックス） ================= */
+// ①「置く」セッション ②画面時間（アプリ版のみ。端末の使用状況から集計） ③つい開きたくなったときの記録
+// データは state.detox に入り、バックアップにも含まれる。画面時間そのものは端末の中だけで集計し、保存も送信もしない
+const dxDur=m=>{ m=Math.max(0,Math.round(m||0)); return m<60?m+"分":Math.floor(m/60)+"時間"+(m%60?m%60+"分":""); };
+const DX_LENS=[15,30,60,120];
+const DX_WHY=["暇","通知","不安","習慣","寝る前","作業から逃げたい"];
+let dx={view:"setup",result:null,len:30,armStop:false}, dxu={access:false,today:null,days:[],at:0,busy:false}, dxWhy="", logMode="focus";
+try{ logMode=localStorage.getItem("contodo.logmode")==="detox"?"detox":"focus"; }catch(e){}
+const dxPlacedMin=k=>state.detox.placed.filter(p=>dayKey(p.at)===k).reduce((a,p)=>a+p.min,0);
+function dxStreak(){ let d=Date.now(),n=0; if(dxPlacedMin(dayKey(d))<10) d-=DAY; while(n<400&&dxPlacedMin(dayKey(d))>=10){ n++; d-=DAY; } return n; }
+const dxUrgesOn=k=>state.detox.urges.filter(u=>dayKey(u.at)===k);
+const dxLine=()=>native()&&dxu.access&&dxu.today?` ・ 画面 ${dxDur(dxu.today.min)}`:"";
+function detoxSummary(){
+  const k=dayKey(Date.now()), u=dxUrgesOn(k);
+  return {goal:state.detox.goal,placed:dxPlacedMin(k),streak:dxStreak(),held:u.filter(x=>x.kind==="held").length,gave:u.filter(x=>x.kind!=="held").length};
+}
+function dxPushConfig(){
+  const n=native(); if(!n||!n.detoxConfig) return; const d=state.detox;
+  try{ n.detoxConfig(JSON.stringify({goal:d.goal,nudge:!!d.nudge,bedOn:!!d.bedOn,bed:d.bed})); }catch(e){}
+}
+// 端末の使用状況から、今日の画面時間などを取ってくる（20秒以内の再取得は省く）
+function dxRefresh(force){
+  const n=native(); if(!n||!n.usageAccess||dxu.busy) return;
+  if(!force&&Date.now()-dxu.at<20000) return;
+  dxu.busy=true; dxu.at=Date.now();
+  setTimeout(()=>{
+    try{
+      dxu.access=!!n.usageAccess();
+      if(dxu.access){ const r=JSON.parse(n.usageSummary()); if(r&&r.ok){ dxu.today=r.today; dxu.days=r.days||[]; } }
+      else { dxu.today=null; dxu.days=[]; }
+    }catch(e){ dxu.access=false; }
+    dxu.busy=false;
+    if(view==="log"&&logMode==="detox") renderLog();
+    if(view==="timer") renderTimerView();
+  },30);
+}
+function dxChart(days,goal){
+  const list=days.slice(-7); if(!list.length) return "";
+  const W=340,H=130,L=4,R=4,T=18,B=22;
+  const peak=Math.max(goal||0,...list.map(d=>d.min),60), max=Math.ceil(peak/60)*60;
+  const y=v=>T+(H-T-B)*(1-v/max), slot=(W-L-R)/list.length, bw=Math.min(24,slot*.5);
+  let g=`<line class="base" x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}"></line>`;
+  if(goal) g+=`<line class="guide" x1="${L}" x2="${W-R}" y1="${y(goal).toFixed(1)}" y2="${y(goal).toFixed(1)}"></line>`;
+  list.forEach((d,i)=>{ const cx=L+slot*i+slot/2, isT=i===list.length-1, over=goal&&d.min>goal;
+    if(d.min>0) g+=`<rect class="b ${isT?"today":""}" ${over&&!isT?'style="fill:var(--danger)"':""} x="${(cx-bw/2).toFixed(1)}" y="${y(d.min).toFixed(1)}" width="${bw.toFixed(1)}" height="${(H-B-y(d.min)).toFixed(1)}" rx="2"></rect>`;
+    if(d.min>0&&isT) g+=`<text class="val" x="${cx.toFixed(1)}" y="${(y(d.min)-5).toFixed(1)}" text-anchor="middle">${(d.min/60).toFixed(1)}h</text>`;
+    g+=`<text x="${cx.toFixed(1)}" y="${H-7}" text-anchor="middle">${isT?"今日":WD[parseKey(d.k).date.getDay()]}</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="直近7日の画面時間">${g}</svg>`;
+}
+function dxUsageHTML(){
+  const n=native(), d=state.detox;
+  if(!n) return `<div class="dx-card"><p class="eyebrow">画面時間</p><p class="dx-note">スマホ全体の画面時間は、Androidのアプリ版で見られます。ブラウザ版でも、下の「置く」と記録は使えます。</p></div>`;
+  if(!n.usageAccess) return `<div class="dx-card"><p class="eyebrow">画面時間</p><p class="dx-note">この機能はアプリを最新版にすると使えます。</p></div>`;
+  if(!dxu.access) return `<div class="dx-card"><p class="eyebrow">画面時間</p>
+    <p class="dx-note">ほかのアプリも含めた、今日の画面時間と画面をつけた回数を出します。端末の「使用状況へのアクセス」を許可してください。集計は端末の中だけで行い、外には送りません。</p>
+    <div class="actions"><button class="act primary" data-act="dx-grant">許可する</button></div></div>`;
+  const t=dxu.today; if(!t) return `<div class="dx-card"><p class="eyebrow">画面時間</p><p class="dx-note">集計しています…</p></div>`;
+  const g=d.goal, over=g&&t.min>g, pct=g?Math.min(100,t.min/g*100):0, mx=t.top&&t.top.length?t.top[0][1]||1:1;
+  return `<div class="dx-card"><p class="eyebrow">今日の画面時間</p>
+    <p class="dx-big ${over?"dx-over":""}">${dxDur(t.min)}</p>
+    <p class="dx-sub">${t.pickups>=0?`画面をつけた回数 ${t.pickups}回`:"画面をつけた回数は、この端末では数えられません"}${g?` ・ 目標 ${dxDur(g)}`:""}</p>
+    ${g?`<div class="meter ${over?"over":""}" style="margin-top:12px"><i style="width:${pct.toFixed(1)}%"></i></div><p class="dx-sub">${over?`目標を ${dxDur(t.min-g)} 超えています。いったん置いてみませんか。`:`目標まで あと ${dxDur(g-t.min)}`}</p>`:""}
+    ${t.top&&t.top.length?`<div class="dx-apps">${t.top.map(([name,m])=>`<div class="dx-app"><span>${esc(name)}</span><span class="dx-bar"><i style="width:${(m/mx*100).toFixed(1)}%"></i></span><span class="mono">${dxDur(m)}</span></div>`).join("")}</div>`:""}
+    <div class="chart-wrap" style="padding-top:16px">${dxChart(dxu.days,g)}${g?`<p class="dx-sub">直近7日。点線は目標（${dxDur(g)}）、赤は超えた日です。</p>`:`<p class="dx-sub">直近7日の画面時間です。</p>`}</div></div>`;
+}
+function detoxHTML(){
+  const d=state.detox, k=dayKey(Date.now()), placed=dxPlacedMin(k), wkPlaced=Array.from({length:7},(_,i)=>dxPlacedMin(dayKey(Date.now()-i*DAY))).reduce((a,b)=>a+b,0);
+  const u=dxUrgesOn(k), held=u.filter(x=>x.kind==="held").length, gave=u.length-held;
+  const wk=d.urges.filter(x=>Date.now()-x.at<7*DAY), rate=wk.length?Math.round(wk.filter(x=>x.kind==="held").length/wk.length*100):null;
+  return `${dxUsageHTML()}
+    <div class="dx-card"><p class="eyebrow">置いた時間</p>
+      <div class="dx-kpis"><div class="kpi"><b>${placed}<small>分</small></b><span>今日</span></div><div class="kpi"><b>${dxStreak()}<small>日</small></b><span>連続（10分以上）</span></div><div class="kpi"><b>${wkPlaced}<small>分</small></b><span>7日の合計</span></div></div>
+      <div class="actions"><button class="act primary" data-act="dx-open">スマホを置く</button></div></div>
+    <div class="dx-card"><p class="eyebrow">つい開きたくなったとき</p>
+      <p class="dx-note">気づいたら、押すだけ。きっかけを選ぶと、あとで傾向が見えます。</p>
+      <div class="dx-chips">${DX_WHY.map(w=>`<button class="chip" data-act="dx-why" data-v="${esc(w)}" aria-pressed="${dxWhy===w}">${esc(w)}</button>`).join("")}</div>
+      <div class="dx-btns"><button class="dx-btn good" data-act="dx-held">開きたくなったけど、<br>やめられた</button><button class="dx-btn soft" data-act="dx-gave">つい見てしまった</button></div>
+      <p class="dx-sub">今日：やめられた ${held}回 ・ 見てしまった ${gave}回${rate!=null?` ／ 7日のやめられた率 ${rate}%`:""}</p></div>
+    <div class="actions"><button class="act" data-act="open-settings">目標・お知らせの設定</button></div>
+    <div class="section-gap" style="margin-top:28px"><p class="eyebrow" style="margin-bottom:6px">続けるコツ</p><ul class="hint-list">
+      <li>見たくなったら、まず1分だけ待つ。波は意外と早く引きます。</li>
+      <li>寝る30分前に「置く」を始める。充電器は枕元から離す。</li>
+      <li>通知は、いま必要なものだけ残す。点ける回数が減ります。</li></ul></div>`;
+}
+function dxUrge(kind){
+  const d=state.detox; d.urges.push({id:uid(),at:Date.now(),kind,why:dxWhy});
+  if(d.urges.length>2000) d.urges=d.urges.slice(-2000);
+  dxWhy=""; save(); buzz(VIB.tap);
+  toast(kind==="held"?"やめられました。その調子です。":"記録しました。気づけたことが大事です。");
+  renderLog();
+}
+// ----- 「置く」セッション -----
+const dxCountText=()=>{ const s=state.detox.session; if(!s) return "00:00"; const r=Math.max(0,Math.ceil((s.endAt-Date.now())/1000)), h=Math.floor(r/3600), m=Math.floor(r%3600/60), sc=r%60; return (h?h+":":"")+pad(m)+":"+pad(sc); };
+function dxRender(){
+  const d=state.detox, box=$("dx-body"), dlg=$("d-detox"), s=d.session;
+  dlg.classList.toggle("dx-run",dx.view==="run"&&!!s);
+  if(dx.view==="run"&&s){
+    box.innerHTML=`<p class="dx-quiet" id="dx-t">置いています</p><p class="dx-count mono" id="dx-count">${dxCountText()}</p>
+      <p class="dx-msg">${native()?"画面を下にして、そっと置いておきましょう。終わったら、通知と振動でお知らせします。":"画面を下にして置いておきましょう。ブラウザ版では終わりの通知は出ないので、この画面を開いたままにしてください。"}</p>
+      <button class="dx-stop ${dx.armStop?"armed":""}" data-act="dx-stop">${dx.armStop?"もう一度で終える":"やめる"}</button>`;
+  } else if(dx.view==="result"&&dx.result){
+    const r=dx.result;
+    if(r.min<1) box.innerHTML=`<p class="sheet-title" id="dx-t">また今度</p><p class="dx-sub">1分に届かなかったので、記録していません。</p><button class="done-btn" data-act="dx-close">閉じる</button>`;
+    else box.innerHTML=`<p class="sheet-title" id="dx-t">${r.early?"ここまで置けました":"置けました"}</p>
+      <p class="dx-big">${r.min}<small>分</small></p>
+      <p class="dx-sub">${r.touches==null?"":(r.touches===0?"この間、画面は一度もつけませんでした。":`この間に画面をつけた回数：${r.touches}回`)}</p>
+      <p class="dx-sub">今日の合計 ${dxDur(dxPlacedMin(dayKey(Date.now())))} ・ 連続 ${dxStreak()}日</p>
+      <button class="done-btn" data-act="dx-close">閉じる</button>`;
+  } else {
+    const n=native(), acc=n&&dxu.access;
+    box.innerHTML=`<p class="sheet-title" id="dx-t">スマホを置く</p>
+      <p class="sheet-sub">置いている間は、画面を見ないでください。時間になったらお知らせします。</p>
+      <div class="dx-len">${DX_LENS.map(m=>`<button class="chip" data-act="dx-len" data-v="${m}" aria-pressed="${dx.len===m}">${m>=60?m/60+"時間":m+"分"}</button>`).join("")}</div>
+      <p class="dx-sub">${acc?"置いている間に画面をつけた回数も数えます。":(n?"「使用状況へのアクセス」を許可すると、画面をつけた回数も数えられます。":"")}</p>
+      <p class="dx-sub">今日 置けた時間：${dxDur(dxPlacedMin(dayKey(Date.now())))}</p>
+      <button class="done-btn" data-act="dx-go">${dx.len>=60?dx.len/60+"時間":dx.len+"分"}、置く</button>`;
+  }
+}
+function openDetox(){
+  const d=state.detox, s=d.session;
+  if(s&&Date.now()>=s.endAt) dxEnd(false,true);
+  else if(s) dx.view="run";
+  else if(dx.view!=="result") { dx.view="setup"; dx.len=DX_LENS.includes(d.len)?d.len:30; }
+  dxRender(); openSheet("d-detox");
+}
+function dxBegin(min){
+  const d=state.detox, now=Date.now(); d.len=min;
+  d.session={startAt:now,endAt:now+min*60000,planned:min}; save();
+  const n=native(); if(n&&n.detoxStart){ try{ n.detoxStart(d.session.endAt,min); }catch(e){} }
+  dx.view="run"; dx.armStop=false; dxRender(); buzz(VIB.start);
+}
+function dxEnd(early,quiet){
+  const d=state.detox, s=d.session; if(!s) return;
+  const now=Date.now(), end=Math.min(now,s.endAt), min=Math.max(0,Math.floor((end-s.startAt)/60000)), n=native();
+  let touches=null;
+  if(n&&n.usagePickups&&dxu.access){ try{ const t=Number(n.usagePickups(s.startAt+10000,end)); if(t>=0) touches=t; }catch(e){} }
+  d.session=null;
+  if(min>=1){ d.placed.push({id:uid(),at:s.startAt,min,planned:s.planned,touches,early:!!early}); if(d.placed.length>1500) d.placed=d.placed.slice(-1500); }
+  save();
+  if(n&&n.detoxCancel){ try{ n.detoxCancel(); }catch(e){} }
+  dx.result={min,planned:s.planned,touches,early:!!early}; dx.view="result"; dx.armStop=false;
+  if(!early&&!quiet){ buzz(VIB.focusEnd); chime("focusEnd"); }
+  dxRender(); if(view==="log") renderLog();
+}
+// 1秒ごと：実行中の表示を進め、時間が来たら結果を出す（画面を離れていた場合は戻ったときに追いつく）
+function dxTick(){
+  const s=state.detox.session; if(!s) return;
+  if(Date.now()>=s.endAt){ dxEnd(false,!visible()); if(visible()&&!$("d-detox").open) openSheet("d-detox"); return; }
+  const c=$("dx-count"); if(c&&$("d-detox").open) c.textContent=dxCountText();
+}
+setInterval(dxTick,1000);
+$("d-detox").addEventListener("close",()=>{ $("d-detox").classList.remove("dx-run"); if(dx.view==="result"){ dx.view="setup"; dx.result=null; } });
+
 /* ================= settings ================= */
 const NUMS=[["focus","集中","分",5,60,5],["short","小休憩","分",1,15,1],["long","長い休憩","分",5,40,5],["every","長い休憩までの回数","回",2,8,1]];
 function renderSettings(){
@@ -1439,6 +1642,16 @@ function renderSettings(){
   if(!native()&&!("vibrate" in navigator)) $("vib-note").textContent="この端末は振動に対応していません（iPhoneは非対応）";
   if(native()){ $("s-notify").checked=true; $("s-notify").disabled=true; $("notify-note").textContent="アプリ版：画面を消していても、区切りで通知します"; }
   else if(!("Notification" in window)){ $("s-notify").disabled=true; $("notify-note").textContent="この端末・ブラウザは通知に対応していません"; }
+  renderDetoxSettings();
+}
+function renderDetoxSettings(){
+  const d=state.detox, n=native(), full=!!(n&&n.usageAccess);
+  $("dx-goal-o").textContent=d.goal?dxDur(d.goal):"オフ";
+  $("dx-nudge").checked=!!d.nudge; $("dx-bed-on").checked=!!d.bedOn; $("dx-bed").value=d.bed||"23:00";
+  ["dx-nudge","dx-bed-on","dx-bed"].forEach(id=>{ $(id).disabled=!full; });
+  $("dx-acc-btn").hidden=!full||dxu.access;
+  $("dx-acc-note").textContent=!n?"画面時間を数えるには、Androidのアプリ版が必要です。":(!full?"アプリを最新版にすると使えます。":(dxu.access?"許可されています。画面時間は端末の中だけで集計します。":"画面時間を数えるために必要です。端末の中だけで集計します。"));
+  if(!n) $("dx-goal-note").textContent="アプリ版で、画面時間とくらべて表示します";
 }
 const darkMQ=window.matchMedia?matchMedia("(prefers-color-scheme: dark)"):null;
 const THEME_META={light:"#F5F6F5",dark:"#111314",paper:"#F2EEE5",mauve:"#F3EEF3"};
@@ -1541,6 +1754,20 @@ document.addEventListener("click",e=>{
     case "reset": setPhase(timer.phase==="quick"?"focus":timer.phase,false); break;
     case "skip": rightAction(); break;
     case "quick5": quick5(); break;
+    case "dx-open": openDetox(); break;
+    case "dx-len": dx.len=Number(b.dataset.v)||30; dxRender(); break;
+    case "dx-go": dxBegin(dx.len); break;
+    case "dx-stop":
+      if(!dx.armStop){ dx.armStop=true; dxRender(); setTimeout(()=>{ if(dx.armStop){ dx.armStop=false; if(dx.view==="run") dxRender(); } },3000); }
+      else { dx.armStop=false; dxEnd(true); }
+      break;
+    case "dx-close": dx.result=null; dx.view="setup"; closeSheet("d-detox"); if(view==="log") renderLog(); break;
+    case "dx-why": dxWhy=dxWhy===b.dataset.v?"":b.dataset.v; renderLog(); break;
+    case "dx-held": dxUrge("held"); break;
+    case "dx-gave": dxUrge("gave"); break;
+    case "log-mode": logMode=b.dataset.v==="detox"?"detox":"focus"; try{ localStorage.setItem("contodo.logmode",logMode); }catch(e){} renderLog(); if(logMode==="detox") dxRefresh(true); break;
+    case "dx-grant": { const n=native(); if(n&&n.usageOpenSettings){ try{ n.usageOpenSettings(); }catch(e){} toast("設定で ConTodo を選んで、許可をオンにしてください。"); } break; }
+    case "dx-goal": { const d=state.detox; d.goal=Math.max(0,Math.min(600,(d.goal||0)+30*Number(b.dataset.d))); $("dx-goal-o").textContent=d.goal?dxDur(d.goal):"オフ"; save(); dxPushConfig(); if(view==="log") renderLog(); break; }
     case "open-park": openSheet("d-park"); setTimeout(()=>$("park-input").focus(),60); break;
     case "open-settings": renderSettings(); openSheet("d-settings"); break;
     case "close-settings": closeSheet("d-settings"); break;
@@ -1649,6 +1876,8 @@ document.addEventListener("change",e=>{
     const t=state.tasks.find(x=>x.id===el.dataset.tid), s=t&&t.steps.find(x=>x.id===el.dataset.sid);
     if(s){ s.done=el.checked; if(el.checked){ s.doneAt=Date.now(); buzz(VIB.tap); } else delete s.doneAt; save(); renderAll(); }
   }
+  if(el.id==="dx-nudge"||el.id==="dx-bed-on"){ state.detox[el.id==="dx-nudge"?"nudge":"bedOn"]=el.checked; save(); dxPushConfig(); return; }
+  if(el.id==="dx-bed"){ if(/^\d{2}:\d{2}$/.test(el.value)){ state.detox.bed=el.value; save(); dxPushConfig(); } return; }
   if(el.classList&&el.classList.contains("switch")&&el.id.startsWith("s-")){
     const k=el.id.slice(2); S()[k]=el.checked; save();
     if(k==="vibrate"&&el.checked) buzz(VIB.tap);
@@ -1734,10 +1963,15 @@ function conAction(a){
   else if(a==="money"){ money.ym=thisYM(); setView("money"); }
   else if(a==="spend"){ setView("money"); setTimeout(()=>openReceipt(null),150); }
   else if(a==="desk") location.href="/kb-cso/desk/";
+  else if(a==="detox") setTimeout(openDetox,150);
+  else if(a==="usage"){ logMode="detox"; setView("log"); dxRefresh(true); }
 }
 window.__conAction=conAction;
 if(params.get("action")) conAction(params.get("action"));
 applyTheme();
+// デトックス：設定を端末に渡し、画面時間を取り、「置く」の最中に戻ってきたときは続きを出す
+dxPushConfig(); dxRefresh(true); dxTick();
+if(!params.get("action")&&state.detox.session&&!$("d-detox").open) setTimeout(openDetox,200);
 if(location.search){ try{ history.replaceState(history.state,"",location.pathname); }catch(e){} }
 requestAnimationFrame(fitRing);
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
