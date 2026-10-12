@@ -1030,8 +1030,16 @@ function logSession(min,complete,kind,at){
   if(state.sessions.length>3000) state.sessions=state.sessions.slice(-3000);
   save();
 }
+// 追いつき中（finish→setPhase→tick→finish の連鎖）は、2区切り目以降を記録せず待機状態で止める
+let catchingUp=false;
 function finish(){
-  const p=timer.phase, endedAt=timer.endAt||Date.now(); timer.running=false;
+  const p=timer.phase;
+  if(catchingUp){ timer.running=false; if(p==="long") timer.round=0; setPhase("focus",false); return; }
+  catchingUp=true;
+  try{ finishPhase(p); } finally{ catchingUp=false; }
+}
+function finishPhase(p){
+  const endedAt=timer.endAt||Date.now(); timer.running=false;
   const fresh=visible()&&Date.now()-endedAt<5000;
   if(visible()){ document.body.classList.remove("flash"); void document.body.offsetWidth; document.body.classList.add("flash"); }
   if(p==="focus"||p==="quick"){
