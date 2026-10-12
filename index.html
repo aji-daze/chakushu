@@ -636,6 +636,17 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   </form>
 </dialog>
 
+<dialog id="d-moimport" aria-labelledby="mi-t">
+  <div class="grab"></div>
+  <p class="sheet-title" id="mi-t">家計簿を取り込む</p>
+  <p class="sheet-sub">claude.ai の家計簿の「ConTodo用に書き出す」で作ったデータを貼り付けるか、ファイルで読み込みます。同じレシートは上書きされ、重なりません。</p>
+  <div class="frm">
+    <textarea class="inp" id="mi-text" rows="8" spellcheck="false" placeholder="{&quot;kind&quot;:&quot;contodo-kakeibo&quot;, …"></textarea>
+    <div class="actions"><button type="button" class="act" data-act="mo-pick">ファイルから読み込む</button></div>
+    <div class="sheet-actions"><button type="button" class="done-btn" data-act="mi-go">取り込む</button></div>
+  </div>
+</dialog>
+
 <dialog id="d-shiftimport" aria-labelledby="si-t">
   <div class="grab"></div>
   <p class="sheet-title" id="si-t">シフト表を入れる</p>
@@ -1655,10 +1666,9 @@ window.__receiptScanned=function(js){
   renderReceipt(); openSheet("d-receipt");
 };
 // claude.ai の家計簿から書き出したファイルを取り込む。同じレシートは上書きするので、何度取り込んでも重ならない
-$("money-file").addEventListener("change",async e=>{
-  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+function importMoneyText(text){
   try{
-    const d=JSON.parse(await f.text());
+    const d=JSON.parse(String(text).trim());
     const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:null; if(!list) throw 0;
     let add=0, upd=0;
     list.forEach(x=>{
@@ -1672,8 +1682,12 @@ $("money-file").addEventListener("change",async e=>{
       else if((state.money.receipts[i].updatedAt||0)<=r.updatedAt){ state.money.receipts[i]=r; upd++; }
     });
     if(d&&!Array.isArray(d)&&Number(d.budget)>0&&!state.money.budget) state.money.budget=Number(d.budget);
-    save(); renderMoney(); toast(`取り込みました（新しく${add}件・更新${upd}件）。`);
-  }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったファイルを選んでください。"); }
+    save(); renderMoney(); toast(`取り込みました（新しく${add}件・更新${upd}件）。`); return true;
+  }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったデータを入れてください。"); return false; }
+}
+$("money-file").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  if(importMoneyText(await f.text())) closeSheet("d-moimport");
 });
 function exportMoneyCSV(){
   const cell=v=>{ const s=String(v==null?"":v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
@@ -2049,7 +2063,9 @@ document.addEventListener("click",e=>{
     case "mo-prev": money.ym=shiftYM(money.ym,-1); money.editBudget=false; renderMoney(); break;
     case "mo-next": if(money.ym<thisYM()){ money.ym=shiftYM(money.ym,1); money.editBudget=false; renderMoney(); } break;
     case "budget-edit": money.editBudget=true; renderMoney(); break;
-    case "mo-import": $("money-file").click(); break;
+    case "mo-import": $("mi-text").value=""; openSheet("d-moimport"); break;
+    case "mo-pick": $("money-file").click(); break;
+    case "mi-go": if(importMoneyText($("mi-text").value)) closeSheet("d-moimport"); break;
     case "mo-csv": exportMoneyCSV(); break;
     case "rc-new": openReceipt(null); break;
     case "rc-scan": rcScan(b.dataset.v); break;
