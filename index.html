@@ -306,6 +306,7 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .top-links{display:flex; align-items:center}
 a.link{text-decoration:none; display:inline-flex; align-items:center}
 
+textarea.inp{min-height:150px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; resize:vertical; font-family:var(--f-mono); font-size:14px; line-height:1.7}
 /* detox（デジタルデトックス） */
 .dx-seg{display:flex; justify-content:flex-end; padding-block:0 12px}
 .dx-card{border:1px solid var(--line); border-radius:14px; padding:16px; margin-block:0 14px}
@@ -634,6 +635,25 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   </form>
 </dialog>
 
+<dialog id="d-shiftimport" aria-labelledby="si-t">
+  <div class="grab"></div>
+  <p class="sheet-title" id="si-t">シフト表を入れる</p>
+  <p class="sheet-sub">「11/1 日 10〜16」のような行を貼り付けてください。「休」の行は読み飛ばします。いま入っているシフトは消えません。</p>
+  <div id="si-nojob" class="msg" hidden>先に勤務先（時給・締め日）を登録してください。<br><button class="act" style="margin-top:8px" data-act="open-jobs">勤務先を登録する</button></div>
+  <div id="si-form" class="frm">
+    <div class="two">
+      <div class="frm"><label for="si-job">勤務先</label><select class="inp" id="si-job"></select></div>
+      <div class="frm"><label for="si-break">休憩（分）</label><input class="inp mono" type="number" inputmode="numeric" min="0" step="5" id="si-break" value="0"></div>
+    </div>
+    <label for="si-text">シフト表</label>
+    <textarea class="inp" id="si-text" rows="9" spellcheck="false" placeholder="11/1 日 10〜16&#10;11/2 月 休&#10;11/3 火 10〜16"></textarea>
+    <div class="actions"><button type="button" class="act" data-act="si-pick">ファイルから読み込む</button></div>
+    <div class="preview" id="si-preview">貼り付けると、読み取った件数を出します。</div>
+    <div class="sheet-actions"><button type="button" class="done-btn" data-act="si-go" id="si-go" disabled>入れる</button></div>
+  </div>
+  <input type="file" id="si-file" accept=".txt,.csv,text/plain,text/csv" hidden>
+</dialog>
+
 <dialog id="d-detox" aria-labelledby="dx-t">
   <div class="grab"></div>
   <div id="dx-body"></div>
@@ -664,6 +684,7 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   <div class="set"><div class="set-l"><label for="s-wake">画面をつけたままにする</label><small id="wake-note">タイマー中は画面を消さない（対応端末のみ）</small></div><input type="checkbox" class="switch" id="s-wake"></div>
   <p class="group-label">シフトと給与</p>
   <div class="set"><div class="set-l"><span>勤務先とシフトパターン</span><small>時給・締め日・給料日・深夜手当</small></div><button class="act" data-act="open-jobs">編集</button></div>
+  <div class="set"><div class="set-l"><span>シフト表を貼り付けて入れる</span><small>「11/1 日 10〜16」のような表を、まとめて登録します</small></div><button class="act" data-act="si-open">開く</button></div>
   <p class="group-label">デジタルデトックス</p>
   <div class="set"><div class="set-l"><span>1日の画面時間の目標</span><small id="dx-goal-note">画面時間と見くらべます（アプリ版）</small></div>
     <div class="stepper"><button data-act="dx-goal" data-d="-1" aria-label="目標を減らす">−</button><output class="mono" id="dx-goal-o">3時間</output><button data-act="dx-goal" data-d="1" aria-label="目標を増やす">＋</button></div></div>
@@ -1138,7 +1159,7 @@ function renderCalPanel(){
         <span class="r">${yen(c.total)}${c.extra?`<small>手当 ${yen(c.extra)}</small>`:""}</span></button>`; });
     ev.forEach(e=>{ h+=`<button class="item" data-act="edit-event" data-id="${e.id}"><span class="t">${e.start?fmtT(e.start)+(e.end?"–"+fmtT(e.end):""):"終日"}</span><span class="m">${esc(e.title)}${e.note?`<small>${esc(e.note)}</small>`:""}</span></button>`; });
     if(!sh.length&&!ev.length) h+=`<p class="empty" style="padding-block:12px">この日の予定はありません。</p>`;
-    h+=`<div class="actions"><button class="act" data-act="new-event">＋ 予定</button><button class="act" data-act="new-shift">＋ シフト</button></div>`;
+    h+=`<div class="actions"><button class="act" data-act="new-event">＋ 予定</button><button class="act" data-act="new-shift">＋ シフト</button><button class="act" data-act="si-open">表から入れる</button></div>`;
   } else {
     const p=progressOf(k);
     h+=`<div class="panel-head"><h3>${title}</h3><span class="mono" style="font-size:13px;color:var(--ink-2)">${p.min}分 ・ ${p.pomos}ポモドーロ</span></div>`;
@@ -1283,6 +1304,75 @@ function openType(id){
 }
 function resetDel(id,hide){ const b=$(id); b.hidden=hide; b.textContent="削除"; b.classList.remove("armed"); }
 function armBtn(btn){ if(btn.classList.contains("armed")) return true; btn.classList.add("armed"); btn.textContent="もう一度で削除"; setTimeout(()=>{ btn.classList.remove("armed"); btn.textContent="削除"; },3000); return false; }
+
+/* ================= シフト表の貼り付け取り込み ================= */
+// 「11/1 日 10〜16」「11月1日 10:00-16:00」「2026-11-01,10-16」などの行を読み取ってシフトにする。
+// 時間のない行（休みなど）は読み飛ばす。同じ日・同じ時間のシフトがすでにあれば重ねない
+function parseShiftText(text){
+  const norm=String(text||"").replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/：/g,":").replace(/／/g,"/").replace(/[〜～~–—－ー]/g,"-");
+  const out={items:[],rest:0,bad:[]}, seen=new Set(), now=new Date();
+  norm.split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim(); if(!line) return;
+    const dm=line.match(/(?:(\d{4})\s*[\/.年-]\s*)?(\d{1,2})\s*[\/月.-]\s*(\d{1,2})\s*日?/);
+    if(!dm) return;
+    const mo=Number(dm[2]), da=Number(dm[3]); let y=Number(dm[1])||now.getFullYear();
+    if(mo<1||mo>12||da<1||da>31) return;
+    if(!dm[1]&&new Date(y,mo-1,da)<new Date(now.getTime()-180*DAY)) y++;
+    const dt=new Date(y,mo-1,da); if(dt.getMonth()!==mo-1) return;
+    const rest=line.slice(dm.index+dm[0].length);
+    const tm=rest.match(/(\d{1,2})(?::(\d{2}))?\s*時?\s*-\s*(\d{1,2})(?::(\d{2}))?/);
+    if(!tm){ if(rest.includes("休")) out.rest++; else out.bad.push(line); return; }
+    const h1=Number(tm[1]), m1=Number(tm[2]||0), h2=Number(tm[3]), m2=Number(tm[4]||0);
+    if(h1>23||h2>24||m1>59||m2>59||(h2===24&&m2>0)){ out.bad.push(line); return; }
+    const date=keyYMD(y,mo,da), start=pad(h1)+":"+pad(m1), end=pad(h2===24?0:h2)+":"+pad(m2), id=date+start+end;
+    if(seen.has(id)) return; seen.add(id);
+    out.items.push({date,start,end});
+  });
+  out.items.sort((a,b)=>a.date.localeCompare(b.date));
+  return out;
+}
+function siPreview(){
+  const r=parseShiftText($("si-text").value), el=$("si-preview"), go=$("si-go");
+  if(!$("si-text").value.trim()){ el.textContent="貼り付けると、読み取った件数を出します。"; go.disabled=true; return; }
+  if(!r.items.length){ el.textContent="シフトを読み取れませんでした。「11/1 日 10〜16」のように、日付と時間が同じ行にある形で貼り付けてください。"; go.disabled=true; return; }
+  const f=r.items[0].date, l=r.items[r.items.length-1].date, p=k=>{ const q=parseKey(k); return q.m+"/"+q.d; };
+  const total=r.items.reduce((a,it)=>{ let m=toMin(it.end)-toMin(it.start); if(m<=0) m+=1440; return a+m; },0);
+  el.innerHTML=`<b>${r.items.length}件</b>のシフトを読み取りました（${p(f)}〜${p(l)}、合計 ${hm(total)}）。休みの行：${r.rest}日${r.bad.length?`　読み取れなかった行：${r.bad.length}`:""}`;
+  go.disabled=false;
+}
+function openShiftImport(){
+  const noJob=!state.jobs.length;
+  $("si-nojob").hidden=!noJob; $("si-form").hidden=noJob;
+  if(!noJob){
+    $("si-job").innerHTML=state.jobs.map(j=>`<option value="${esc(j.id)}">${esc(j.name)}</option>`).join("");
+    $("si-text").value=""; siPreview();
+  }
+  openSheet("d-shiftimport");
+}
+function importShifts(){
+  const job=jobById($("si-job").value); if(!job) return;
+  const r=parseShiftText($("si-text").value), br=Math.max(0,Math.round(Number($("si-break").value)||0));
+  if(!r.items.length) return;
+  let add=0, dup=0;
+  r.items.forEach(it=>{
+    if(state.shifts.some(s=>s.date===it.date&&s.jobId===job.id&&s.start===it.start&&s.end===it.end)){ dup++; return; }
+    state.shifts.push({id:uid(),date:it.date,jobId:job.id,typeId:null,start:it.start,end:it.end,breakMin:br,wage:job.wage}); add++;
+  });
+  save(); closeSheet("d-shiftimport");
+  const p=parseKey(r.items[0].date); cal.y=p.y; cal.m=p.m; cal.sel=r.items[0].date; cal.mode="plan"; saveCal();
+  if(view==="cal") renderCal(); renderTodayPlan();
+  toast(`${add}件のシフトを入れました${dup?`（同じものが${dup}件あったので省きました）`:""}。`);
+}
+// 表計算ソフトの CSV は Shift_JIS のことがあるので、読めなければ Shift_JIS で読み直す
+$("si-file").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const buf=await f.arrayBuffer(); let t;
+    try{ t=new TextDecoder("utf-8",{fatal:true}).decode(buf); }catch(_){ t=new TextDecoder("shift_jis").decode(buf); }
+    $("si-text").value=t; siPreview();
+  }catch(err){ toast("ファイルを読み込めませんでした。"); }
+});
 
 /* ================= log ================= */
 const STROKES=[[3,4,21,4],[12,4,12,21],[12,12.5,19,12.5],[6,11,6,21],[2,21,22,21]];
@@ -1758,6 +1848,9 @@ document.addEventListener("click",e=>{
     case "reset": setPhase(timer.phase==="quick"?"focus":timer.phase,false); break;
     case "skip": rightAction(); break;
     case "quick5": quick5(); break;
+    case "si-open": openShiftImport(); break;
+    case "si-pick": $("si-file").click(); break;
+    case "si-go": importShifts(); break;
     case "dx-open": openDetox(); break;
     case "dx-len": dx.len=Number(b.dataset.v)||30; dxRender(); break;
     case "dx-go": dxBegin(dx.len); break;
@@ -1862,6 +1955,7 @@ document.addEventListener("input",e=>{
     updateShiftPreview();
   }
   if(el.id==="jm-line"){ S().incomeLine=Math.max(0,Number(el.value)||0); save(); }
+  if(el.id==="si-text") siPreview();
   if(draft&&el.dataset){
     if(el.dataset.rf) draft[el.dataset.rf]=el.value;
     else if(el.dataset.rk){
