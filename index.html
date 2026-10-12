@@ -1671,9 +1671,10 @@ function importMoneyText(text){
   try{
     const d=JSON.parse(String(text).trim());
     const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:null; if(!list) throw 0;
-    let add=0, upd=0;
+    let add=0, upd=0, last="";
     list.forEach(x=>{
       if(!x||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")||!Array.isArray(x.items)) return;
+      if(x.date>last) last=x.date;
       const id="kb-"+String(x.id||uid()), items=x.items.map(it=>({name:String(it.name||"品目"),price:Math.round(Number(it.price)||0),category:CATS.includes(it.category)?it.category:"その他"}));
       const r={id,date:x.date,store:String(x.store||"（店名なし）"),items,total:sumItems(items),method:x.method||"receipt",
         createdAt:Number(x.createdAt)||Date.now(),updatedAt:Number(x.updatedAt)||Date.now()};
@@ -1683,7 +1684,9 @@ function importMoneyText(text){
       else if((state.money.receipts[i].updatedAt||0)<=r.updatedAt){ state.money.receipts[i]=r; upd++; }
     });
     if(d&&!Array.isArray(d)&&Number(d.budget)>0&&!state.money.budget) state.money.budget=Number(d.budget);
-    save(); renderMoney(); toast(`取り込みました（新しく${add}件・更新${upd}件）。`); return true;
+    if(last){ money.ym=last.slice(0,7)>thisYM()?thisYM():last.slice(0,7); money.editBudget=false; }
+    save(); renderMoney();
+    toast(add+upd?`取り込みました（新しく${add}件・更新${upd}件）。${Number(money.ym.slice(5))}月を表示しています。`:"取り込める記録がありませんでした。"); return true;
   }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったデータを入れてください。"); return false; }
 }
 $("money-file").addEventListener("change",async e=>{
