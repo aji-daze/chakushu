@@ -287,6 +287,7 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .kb-cat small{color:var(--ink-3); margin-left:4px}
 .kb-actions{display:flex; flex-wrap:wrap; gap:8px; padding-block:18px 6px; border-bottom:1px solid var(--line)}
 .kb-actions a.act{text-decoration:none; display:inline-flex; align-items:center}
+.kb-diff{font-size:12px; color:var(--ink-2); margin:6px 0 0; line-height:1.7}
 .kb-day{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-3); padding-top:16px}
 .kb-row{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; width:100%; text-align:left; padding-block:12px; border-bottom:1px solid var(--line); min-height:52px}
 .kb-row b{font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -1485,8 +1486,9 @@ function renderMoney(){
     <p class="kb-sub">${rs.length}件${prev?` ・ 先月 <span class="mono">${yenS(prev)}</span>`:""}</p>
     ${budget}${catHtml}
     <div class="kb-actions">
-      <button class="act primary" data-act="rc-new">＋ 手入力</button>
-      <a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>
+      ${native()&&native().scanReceipt
+        ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から</button><button class="act" data-act="rc-new">＋ 手入力</button>`
+        :`<button class="act primary" data-act="rc-new">＋ 手入力</button><a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>`}
       <button class="act" data-act="mo-import">取り込む</button>
       ${rs.length?'<button class="act" data-act="mo-csv">CSV</button>':""}
     </div>
@@ -1519,11 +1521,13 @@ function renderReceipt(){
     </div>`).join("")}</div>
     <button class="kb-add" data-act="rc-add-item">＋ 品目を追加</button>
     <div class="kb-sum"><span>合計</span><span class="mono" id="rc-sum">${yenS(sumItems(d.items))}</span></div>
+    <div id="rc-diff"></div>
     <p class="fine">値引きはマイナスの金額で入れます（例：-50）。</p>
     <div class="sheet-actions">
       ${d.id?'<button type="button" class="act danger" data-act="rc-del">削除</button>':""}
       <button type="button" class="done-btn" data-act="rc-save">保存</button>
     </div>`;
+  rcDiff();
 }
 function saveReceipt(){
   const d=draft; if(!d) return;
@@ -1533,11 +1537,123 @@ function saveReceipt(){
   if(!items.length){ toast("金額を1つ以上入れてください。"); return; }
   const now=Date.now(), old=d.id?state.money.receipts.find(x=>x.id===d.id):null;
   const r={...(old||{}),id:d.id||"ct"+uid(),date:d.date,store:String(d.store||"").trim()||"（店名なし）",items,total:sumItems(items),
-    method:old?old.method:"manual",createdAt:old&&old.createdAt||now,updatedAt:now};
+    method:old?old.method:(d.method||"manual"),createdAt:old&&old.createdAt||now,updatedAt:now};
   delete r.needsReview; delete r.reviewNote;
   state.money.receipts=state.money.receipts.filter(x=>x.id!==r.id).concat([r]);
   money.ym=r.date.slice(0,7); save(); closeSheet("d-receipt"); draft=null; renderMoney(); toast(old?"更新しました。":"入れました。");
 }
+/* ---------- レシートの読み取り ----------
+   アプリ版が端末の文字認識で読んだ「行（文字と位置）」を、店名・日付・品目・金額に整える。
+   外部のAIは使わず、写真もこの端末から出さない。読み取りは間違えうるので、必ず確認の画面を通す */
+const rcNorm=s=>String(s||"").replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+  .replace(/[，､]/g,",").replace(/[．]/g,".").replace(/[￥]/g,"¥").replace(/[−‐‑–—－▲△]/g,"-").replace(/[：]/g,":").replace(/[／]/g,"/").replace(/\s+/g," ").trim();
+const RC_LETTER=/[ぁ-んァ-ヶ一-龠A-Za-z]/;
+const RC_SKIP=/小計|合計|買上|預り|預かり|お?釣|現金|クレジット|カード|ポイント|点数|消費税|税込|税率|対象|内税|外税|電話|TEL|領収|レジ(?:No|番|\d)|担当|責任者|登録番号|ありがとう|ご来店|お会計|ご請求|お支払|有効期限|QR|PayPay|Suica|電子マネー|残高|No\.|\d{1,2}:\d{2}|20\d{2}\s*[年\/.\-]/i;
+const RC_TOTAL=/合計|お買上|買上計|ご請求|お会計|総合計|お支払金額|ご利用金額/;
+const RC_NOT_TOTAL=/小計|税|ポイント|預|釣|割引|点数/;
+const RC_DISC=/値引|割引|引き|クーポン|ディスカウント|セール|還元|優待/;
+const RC_CATS=[
+  ["外食",/スターバックス|スタバ|ドトール|タリーズ|マクドナルド|マック|モスバーガー|ケンタッキー|吉野家|すき家|松屋|なか卯|サイゼリヤ|ガスト|ココス|ラーメン|食堂|カフェ|珈琲|コーヒー|レストラン|居酒屋|定食|寿司|そば|うどん|丼|ランチ/],
+  ["交通",/Suica|PASMO|ICOCA|切符|乗車|運賃|バス|タクシー|ガソリン|駐車/i],
+  ["医療・健康",/薬|医院|クリニック|病院|歯科|サプリ|マスク|絆創膏|湿布|目薬|処方/],
+  ["衣服・美容",/ユニクロ|ＧＵ|しまむら|衣料|靴|シャツ|パンツ|靴下|化粧|ファンデ|口紅|シャンプー|美容|コスメ|ヘア/],
+  ["趣味・娯楽",/書店|文庫|雑誌|CD|DVD|ゲーム|映画|チケット|おもちゃ|紀伊國屋|TSUTAYA|ゲオ|カラオケ/i],
+  ["日用品",/洗剤|ティッシュ|トイレット|ラップ|ゴミ袋|電池|歯ブラシ|歯磨|柔軟|スポンジ|ハンドソープ|マツモトキヨシ|ダイソー|セリア|ホームセンター|ニトリ|ドラッグ|ウエルシア|スギ薬局|ココカラ|サンドラッグ/],
+  ["食費",/まいばすけっと|イオン|ライフ|西友|ヨーカドー|オーケー|業務スーパー|成城石井|サミット|マルエツ|スーパー|セブン|ファミリーマート|ファミマ|ローソン|ミニストップ|牛乳|パン|米|卵|肉|魚|野菜|豆腐|納豆|バナナ|りんご|ヨーグルト|チーズ|ハム|ソーセージ|麺|飲料|水|茶|ジュース|ビール|酒|菓子|チョコ|アイス|惣菜|おにぎり|弁当|サンド/]
+];
+const rcCatOf=txt=>{ for(const [c,re] of RC_CATS) if(re.test(txt)) return c; return ""; };
+// 位置の近い行を同じ「行」にまとめ、左から右へつなぐ（品名と金額が別々に認識されても、1行に戻る）
+function rcRows(lines){
+  const L=(lines||[]).filter(l=>l&&String(l.t||"").trim()).map(l=>({t:rcNorm(l.t),x:Number(l.x)||0,y:(Number(l.y)||0)+(Number(l.h)||0)/2,h:Number(l.h)||20})).filter(l=>l.t);
+  if(!L.length) return [];
+  const hs=L.map(l=>l.h).sort((a,b)=>a-b), mh=hs[Math.floor(hs.length/2)]||20;
+  L.sort((a,b)=>a.y-b.y||a.x-b.x);
+  const rows=[];
+  L.forEach(l=>{ const r=rows[rows.length-1];
+    if(r&&Math.abs(l.y-r.y)<=mh*0.6){ r.parts.push(l); r.y=r.parts.reduce((a,p)=>a+p.y,0)/r.parts.length; } else rows.push({y:l.y,parts:[l]}); });
+  return rows.map(r=>r.parts.sort((a,b)=>a.x-b.x).map(p=>p.t).join("  "));
+}
+// 行の終わりにある金額を取り出す（税区分の印・「円」は取り除く）。品名にくっついた数字は金額にしない
+function rcPrice(row){
+  const t=row.replace(/\s*(?:[※＊*]|軽|\(軽\)|\(税\))+\s*$/,"").replace(/\s*円\s*$/,"").trim();
+  const m=t.match(/(?:^|\s)(-?)\s*(¥?)\s*(\d{1,3}(?:,\d{3})+|\d+)$/);
+  if(!m) return null;
+  let v=Number(m[3].replace(/,/g,"")); if(m[1]) v=-v;
+  if(!m[1]&&!m[2]&&!m[3].includes(",")&&v<10) return null;
+  if(Math.abs(v)>=1000000) return null;
+  return {name:t.slice(0,m.index).trim(),price:v};
+}
+function rcDate(rows){
+  const ok=(y,m,d)=>{ y=Number(y); m=Number(m); d=Number(d); const t=new Date(y,m-1,d); if(m<1||m>12||d<1||d>31||t.getMonth()!==m-1) return ""; if(t>new Date(Date.now()+2*DAY)||t<new Date(Date.now()-400*DAY)) return ""; return keyYMD(y,m,d); };
+  for(const r of rows){
+    let m=r.match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})/); if(m){ const v=ok(m[1],m[2],m[3]); if(v) return v; }
+    m=r.match(/令和\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/); if(m){ const v=ok(2018+Number(m[1]),m[2],m[3]); if(v) return v; }
+    m=r.match(/(?:^|[^\d])(\d{2})[\/.\-](\d{1,2})[\/.\-](\d{1,2})(?:[^\d]|$)/); if(m){ const v=ok(2000+Number(m[1]),m[2],m[3]); if(v) return v; }
+  }
+  return "";
+}
+function rcStore(rows){
+  for(const r of rows.slice(0,6)){
+    if(!RC_LETTER.test(r)||r.length<2) continue;
+    if(/^\d|TEL|電話|〒|領収|レシート|http|www|\d{2,4}-\d{2,4}|20\d{2}\s*[年\/.\-]|\d{1,2}:\d{2}/i.test(r)) continue;
+    if(rcPrice(r)&&rcPrice(r).price>0&&RC_LETTER.test(rcPrice(r).name)&&/\d{2,}$/.test(r)) continue;
+    return r.replace(/\s{2,}/g," ").slice(0,30);
+  }
+  return "";
+}
+function parseReceipt(lines){
+  const rows=rcRows(lines), res={store:rcStore(rows),date:rcDate(rows),items:[],total:null};
+  const storeCat=rcCatOf(res.store);
+  let pending="";
+  rows.forEach(row=>{
+    const p=rcPrice(row);
+    if(RC_TOTAL.test(row)&&!RC_NOT_TOTAL.test(row)){ if(p&&p.price>0) res.total=p.price; pending=""; return; }
+    if(RC_SKIP.test(row)){ pending=""; return; }
+    if(!p){ pending=RC_LETTER.test(row)&&row.length>=2&&!/^[\s\-=ー＝＊*・.]+$/.test(row)?row:""; return; }
+    let name=p.name, price=p.price;
+    const bare=name.replace(/[0-9,.×xX@＠¥点個本枚袋円\s]/g,"");
+    if(!RC_LETTER.test(bare)){ if(pending){ name=pending; } else { pending=""; return; } }   // 「2個 × 98  196」のような数量の行は、前の品名につなぐ
+    pending="";
+    if(RC_DISC.test(name)) price=-Math.abs(price);
+    name=name.replace(/^[\s・*※＊]+/,"").replace(/\s{2,}/g," ").trim()||"品目";
+    const prev=res.items[res.items.length-1];
+    const cat=RC_DISC.test(name)&&prev?prev.category:(rcCatOf(name)||storeCat||"食費");
+    res.items.push({name:name.slice(0,40),price,category:cat});
+  });
+  return res;
+}
+function rcDiff(){
+  const el=$("rc-diff"); if(!el||!draft) return;
+  const t=draft.scannedTotal, s=sumItems(draft.items);
+  el.innerHTML=(t!=null&&Math.round(t-s)!==0)?`<p class="kb-diff">レシートの合計 <span class="mono">${yenS(t)}</span> と <span class="mono">${yenS(t-s)}</span> ずれています。<button class="kb-link" data-act="rc-spread">差額を品目に振り分ける</button></p>`:"";
+}
+function rcUpdate(){ const s=$("rc-sum"); if(s&&draft) s.textContent=yenS(sumItems(draft.items)); rcDiff(); }
+// 外税などで品目の合計とレシートの合計がずれるとき、金額に比例して差額を振り分ける
+function rcSpread(d){
+  const s=sumItems(d.items), diff=Math.round(d.scannedTotal-s);
+  const pos=d.items.map((it,i)=>[i,Number(it.price)||0]).filter(([,p])=>p>0), base=pos.reduce((a,[,p])=>a+p,0);
+  if(!diff||!base) return;
+  let given=0; for(const [i,p] of pos){ const add=Math.floor(diff*p/base); d.items[i].price=(Number(d.items[i].price)||0)+add; given+=add; }
+  const big=pos.slice().sort((a,b)=>b[1]-a[1])[0][0]; d.items[big].price=(Number(d.items[big].price)||0)+(diff-given);
+}
+function rcScan(mode){
+  const n=native(); if(!n||!n.scanReceipt){ toast("この機能は、Androidのアプリ版で使えます。"); return; }
+  try{ n.scanReceipt(mode); }catch(e){ toast("カメラを開けませんでした。"); }
+}
+// アプリ版から届く：読み取り中の知らせと、読み取り結果
+window.__receiptStatus=function(s){ if(s==="reading") toast("読み取っています…"); };
+window.__receiptScanned=function(js){
+  let r; try{ r=typeof js==="string"?JSON.parse(js):js; }catch(e){ r=null; }
+  if(!r||!r.ok){ toast((r&&r.error)||"読み取れませんでした。明るい場所で、レシート全体が入るように撮ってみてください。"); return; }
+  if(view!=="money") setView("money");
+  const p=parseReceipt(r.lines||[]);
+  draft={id:null,store:p.store,date:p.date||dayKey(Date.now()),items:p.items.length?p.items:[blankItem()],method:"scan",scannedTotal:p.total};
+  const s=sumItems(draft.items);
+  if(!p.items.length){ draft.needsReview=true; draft.reviewNote="品目を読み取れませんでした。レシートを見ながら入れてください。"; }
+  else if(p.total!=null&&s!==p.total){ draft.needsReview=true; draft.reviewNote=`読み取った品目の合計 ${yenS(s)} が、レシートの合計 ${yenS(p.total)} と合っていません。レシートと見比べて直してください。`; }
+  else { draft.needsReview=true; draft.reviewNote=p.total!=null?"読み取りました。合計は合っています。品名と金額を、レシートと見比べて保存してください。":"読み取りました。レシートの合計が見つからなかったので、金額をレシートと見比べてください。"; }
+  renderReceipt(); openSheet("d-receipt");
+};
 // claude.ai の家計簿から書き出したファイルを取り込む。同じレシートは上書きするので、何度取り込んでも重ならない
 $("money-file").addEventListener("change",async e=>{
   const f=e.target.files&&e.target.files[0]; e.target.value=""; if(!f) return;
@@ -1936,6 +2052,8 @@ document.addEventListener("click",e=>{
     case "mo-import": $("money-file").click(); break;
     case "mo-csv": exportMoneyCSV(); break;
     case "rc-new": openReceipt(null); break;
+    case "rc-scan": rcScan(b.dataset.v); break;
+    case "rc-spread": if(draft&&draft.scannedTotal!=null){ rcSpread(draft); renderReceipt(); } break;
     case "rc-open": openReceipt(id); break;
     case "rc-add-item": if(draft){ draft.items.push(blankItem()); renderReceipt(); const n=document.querySelectorAll('#rc-body [data-rk="name"]'); if(n.length) n[n.length-1].focus(); } break;
     case "rc-del-item": if(draft){ draft.items.splice(Number(b.dataset.i),1); if(!draft.items.length) draft.items.push(blankItem()); renderReceipt(); } break;
@@ -1963,7 +2081,7 @@ document.addEventListener("input",e=>{
       if(el.dataset.rk==="price"){ el.value=el.value.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[−ー－]/g,"-").replace(/[^\d-]/g,""); it.price=el.value; }
       else it[el.dataset.rk]=el.value;
       if(el.dataset.rk==="category") lastCat=el.value;
-      const s=$("rc-sum"); if(s) s.textContent=yenS(sumItems(draft.items));
+      rcUpdate();
     }
   }
 });
