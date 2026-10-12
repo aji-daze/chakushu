@@ -28,7 +28,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Shippori+Mincho:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Shippori+Mincho:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
 <style>
 :root{
   color-scheme:light;
@@ -38,7 +38,7 @@
   --backdrop:rgba(20,24,26,.32);
   --f-serif:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
-  --f-mono:"DM Mono",ui-monospace,"SFMono-Regular","Consolas",monospace;
+  --f-mono:"DM Sans",ui-monospace,"SFMono-Regular","Consolas",monospace;
   --tabbar:60px;
   --gutter:max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
 }
@@ -285,8 +285,10 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .kb-bar i{display:block; height:100%; border-radius:3px}
 .kb-cat .mono{font-size:12px; text-align:right; min-width:6em}
 .kb-cat small{color:var(--ink-3); margin-left:4px}
-.kb-actions{display:flex; flex-wrap:wrap; gap:8px; padding-block:18px 6px; border-bottom:1px solid var(--line)}
+.kb-actions{display:flex; gap:8px; padding-block:22px 4px}
+.kb-actions .act{flex:1 1 0; min-width:0; justify-content:center; text-align:center; padding-inline:8px; white-space:nowrap}
 .kb-actions a.act{text-decoration:none; display:inline-flex; align-items:center}
+.kb-more{display:flex; gap:18px; padding-block:2px 6px; border-bottom:1px solid var(--line)}
 .kb-diff{font-size:12px; color:var(--ink-2); margin:6px 0 0; line-height:1.7}
 .kb-day{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-3); padding-top:16px}
 .kb-row{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 12px; width:100%; text-align:left; padding-block:12px; border-bottom:1px solid var(--line); min-height:52px}
@@ -1483,7 +1485,7 @@ function renderMoney(){
       g.map(r=>{ const cs=[...new Set((r.items||[]).map(i=>i.category))];
         return `<button class="kb-row" data-act="rc-open" data-id="${esc(r.id)}"><b>${esc(r.store)}</b><span class="mono">${yenS(sumItems(r.items))}</span>
           <small>${r.needsReview?'<span class="kb-flag">要確認</span>':""}${cs.map(c=>`<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join("")}<span>${(r.items||[]).length}品目</span></small></button>`; }).join("");
-  }).join(""):`<p class="empty">この月の記録はまだありません。「手入力」で入れるか、claude.ai の家計簿で読み取ったレシートを「取り込む」で入れます。</p>`;
+  }).join(""):`<p class="empty">この月の記録はまだありません。「手入力」で入れるか、claude.ai の家計簿のデータは「家計簿を取り込む」で入れます。</p>`;
   $("money").innerHTML=`
     <div class="kb-top">
       <div class="cal-month">
@@ -1500,9 +1502,8 @@ function renderMoney(){
       ${native()&&native().scanReceipt
         ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から</button><button class="act" data-act="rc-new">＋ 手入力</button>`
         :`<button class="act primary" data-act="rc-new">＋ 手入力</button><a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>`}
-      <button class="act" data-act="mo-import">取り込む</button>
-      ${rs.length?'<button class="act" data-act="mo-csv">CSV</button>':""}
     </div>
+    <div class="kb-more"><button class="kb-link" data-act="mo-import">家計簿を取り込む</button>${rs.length?'<button class="kb-link" data-act="mo-csv">CSVで書き出す</button>':""}</div>
     ${list}`;
   const bi2=$("budget-input"); if(bi2) bi2.focus();
 }
@@ -1519,7 +1520,7 @@ function renderReceipt(){
   $("rc-body").innerHTML=`
     ${d.needsReview?`<p class="msg">${esc(d.reviewNote||"読み取った金額とレシートの支払額が合っていません。レシートと見比べて直してください。")}</p>`:""}
     <div class="frm">
-      <div class="two">
+      <div class="two" style="grid-template-columns:minmax(0,1fr)">
         <div class="frm"><label for="rc-store">店名</label><input class="inp" type="text" id="rc-store" data-rf="store" value="${esc(d.store)}" placeholder="例：まいばすけっと" autocomplete="off"></div>
         <div class="frm"><label for="rc-date">日付</label><input class="inp" type="date" id="rc-date" data-rf="date" value="${esc(d.date)}"></div>
       </div>
