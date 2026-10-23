@@ -206,7 +206,10 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid var(--line); touch-action:pan-y}
 .day{position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 1px 6px; min-height:60px; min-width:0; border-bottom:1px solid var(--line); border-radius:0; overflow:hidden}
 .day .num{font-family:var(--f-mono); font-size:13px; width:26px; height:26px; line-height:26px; border-radius:50%; text-align:center; position:relative; z-index:1}
-.day.sun .num{color:var(--sun)} .day.sat .num{color:var(--sat)}
+.day.sun .num{color:var(--sun)} .day.sat .num{color:var(--sat)} .day.hol .num{color:var(--sun)}
+.hol-line{display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; margin:10px 0 0; font-size:12px; color:var(--ink-2); line-height:1.7}
+.hol-line i{width:6px; height:6px; border-radius:50%; background:var(--sun); flex:none; align-self:center}
+.hol-name{font-size:12px; color:var(--sun)}
 .day.out{opacity:.35}
 .day.today .num{background:var(--ink); color:var(--bg)}
 .day.sel::before{content:""; position:absolute; inset:2px; border-radius:10px; background:var(--accent-soft)}
@@ -822,7 +825,9 @@ function widgetSnapshot(){
   state.shifts.forEach(s=>{ if(s.date<lo||s.date>hi) return; const j=jobById(s.jobId), d=slot(s.date), c=j?j.color:JOB_COLORS[0]; d.s.push(c); d.l.push([fmtT(s.start)+"–"+fmtT(s.end),j?j.name:"シフト",c,toMin(s.start)]); });
   state.events.forEach(e=>{ if(e.date<lo||e.date>hi) return; const d=slot(e.date); d.e++; d.l.push([e.start?fmtT(e.start):"終日",e.title,"",e.start?toMin(e.start):-1]); });
   Object.values(days).forEach(d=>{ d.l.sort((a,b)=>a[3]-b[3]); d.l=d.l.map(x=>x.slice(0,3)); });
-  return {v:1,ts:Date.now(),todayKey:todayK,theme,
+  const hol={}, yy=new Date().getFullYear();
+  [yy-1,yy,yy+1].forEach(y=>Object.assign(hol,jpHolidays(y)));
+  return {v:1,ts:Date.now(),todayKey:todayK,theme,hol,
     timer:{phase:timer.phase,label:PHASE_LABEL[timer.phase],running:!!timer.running,endAt:timer.endAt||0,left:timer.left,total:timer.total,round:timer.round||0,every:S().every},
     today:{pomos:ts.filter(s=>s.complete&&s.kind!=="quick").length,min:ts.reduce((a,s)=>a+s.min,0)},days,
     desk:deskSummary(),money:moneySummary(),detox:detoxSummary()};
@@ -1070,7 +1075,16 @@ function rightAction(){
   setPhase("focus",false);
 }
 setInterval(()=>{ if(timer.running) tick(); },250);
-document.addEventListener("visibilitychange",()=>{ if(visible()){ tick(); syncWake(); clearNotifications(); dxTick(); dxRefresh(true); } });
+// 開きっぱなしのまま日付が変わったら、カレンダーの「今日」を新しい日に合わせる
+let rollKey=dayKey(Date.now());
+function dayRoll(){
+  const k=dayKey(Date.now()); if(k===rollKey) return;
+  rollKey=k; const d=new Date();
+  cal.y=d.getFullYear(); cal.m=d.getMonth()+1; cal.sel=k;
+  renderCal(); pushWidget();
+}
+setInterval(dayRoll,60000);
+document.addEventListener("visibilitychange",()=>{ if(visible()){ dayRoll(); tick(); syncWake(); clearNotifications(); dxTick(); dxRefresh(true); } });
 
 /* ================= tasks ================= */
 const openRows=new Set(); let armed=null, rowsInit=false;
@@ -1118,6 +1132,51 @@ function renderPark(){
     :'<li><p class="empty">集中中に浮かんだ「あれやらなきゃ」は、タイマー画面の「脇道メモ」からここへ。</p></li>';
 }
 
+/* ================= 日本の祝日 ================= */
+// 1990〜2099年。春分・秋分は近似式、ハッピーマンデー、振替休日、国民の休日、2019〜2021年の特例を含む
+const jpHolCache={};
+function jpHolidays(y){
+  if(jpHolCache[y]) return jpHolCache[y];
+  const h={};
+  if(y<1990||y>2099) return (jpHolCache[y]=h);
+  const add=(m,d,n)=>{ h[keyYMD(y,m,d)]=n; };
+  const nthMon=(m,n)=>1+((8-new Date(y,m-1,1).getDay())%7)+(n-1)*7;
+  const eq=a=>Math.floor(a+0.242194*(y-1980)-Math.floor((y-1980)/4));
+  add(1,1,"元日");
+  add(1,y>=2000?nthMon(1,2):15,"成人の日");
+  add(2,11,"建国記念の日");
+  if(y>=2020) add(2,23,"天皇誕生日");
+  add(3,eq(20.8431),"春分の日");
+  add(4,29,y>=2007?"昭和の日":"みどりの日");
+  add(5,3,"憲法記念日"); add(5,5,"こどもの日");
+  if(y>=2007) add(5,4,"みどりの日");
+  if(y===2019){ add(5,1,"天皇の即位の日"); add(10,22,"即位礼正殿の儀"); }
+  if(y>=2003){ if(y===2020) add(7,23,"海の日"); else if(y===2021) add(7,22,"海の日"); else add(7,nthMon(7,3),"海の日"); }
+  else add(7,20,"海の日");
+  if(y>=2016){ if(y===2020) add(8,10,"山の日"); else if(y===2021) add(8,8,"山の日"); else add(8,11,"山の日"); }
+  add(9,y>=2003?nthMon(9,3):15,"敬老の日");
+  add(9,eq(23.2488),"秋分の日");
+  if(y===2020) add(7,24,"スポーツの日"); else if(y===2021) add(7,23,"スポーツの日");
+  else add(10,y>=2000?nthMon(10,2):10,y>=2020?"スポーツの日":"体育の日");
+  add(11,3,"文化の日"); add(11,23,"勤労感謝の日");
+  if(y<=2018) add(12,23,"天皇誕生日");
+  // 前後を祝日にはさまれた平日は「国民の休日」
+  for(let d=new Date(y,0,2); d.getFullYear()===y; d.setDate(d.getDate()+1)){
+    const k=dayKey(d); if(h[k]||d.getDay()===0) continue;
+    const p=new Date(d), n=new Date(d); p.setDate(p.getDate()-1); n.setDate(n.getDate()+1);
+    if(h[dayKey(p)]&&h[dayKey(n)]) h[k]="国民の休日";
+  }
+  // 日曜と重なった祝日は、次の祝日でない日が振替休日
+  Object.keys(h).sort().forEach(k=>{
+    const p=parseKey(k); if(p.date.getDay()!==0) return;
+    const d=new Date(p.date);
+    do{ d.setDate(d.getDate()+1); }while(h[dayKey(d)]);
+    if(d.getFullYear()===y) h[dayKey(d)]="振替休日";
+  });
+  return (jpHolCache[y]=h);
+}
+const holName=k=>jpHolidays(+k.slice(0,4))[k]||"";
+
 /* ================= calendar ================= */
 function saveCal(){ try{ localStorage.setItem(CKEY,JSON.stringify({mode:cal.mode})); }catch(e){} }
 function progressOf(k){
@@ -1149,7 +1208,8 @@ function renderCal(){
   for(let i=0;i<42;i++){
     const d=new Date(y,m-1,1-startDow+i), k=dayKey(d), out=d.getMonth()!==m-1, dow=d.getDay();
     if(i>=28&&i%7===0&&out) break;
-    const cls=["day",out?"out":"",k===today?"today":"",k===cal.sel?"sel":"",dow===0?"sun":"",dow===6?"sat":""].join(" ");
+    const hol=holName(k);
+    const cls=["day",out?"out":"",k===today?"today":"",k===cal.sel?"sel":"",dow===0?"sun":"",dow===6?"sat":"",hol?"hol":""].join(" ");
     let inner="";
     if(cal.mode==="plan"){
       const sh=(shiftsBy[k]||[]).sort((a,b)=>toMin(a.start)-toMin(b.start)).slice(0,2);
@@ -1157,24 +1217,26 @@ function renderCal(){
         return `<span class="sbar" style="background:${j?j.color:JOB_COLORS[0]}">${esc(label)}</span>`; }).join("");
       const ev=(eventsBy[k]||[]).length;
       if(ev) inner+=`<span class="edots">${"<i></i>".repeat(Math.min(3,ev))}</span>`;
-      html+=`<button class="${cls}" data-act="day" data-k="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日"><span class="num">${d.getDate()}</span>${inner}</button>`;
+      html+=`<button class="${cls}" data-act="day" data-k="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日${hol?"（"+hol+"）":""}"><span class="num">${d.getDate()}</span>${inner}</button>`;
     } else {
       const mn=minBy[k]||0;
       html+=`<button class="${cls}" data-act="day" data-k="${k}" data-lv="${level(mn)}" aria-label="${d.getMonth()+1}月${d.getDate()}日 ${mn}分"><span class="heat"></span><span class="num">${d.getDate()}</span>${mn?`<span class="pmin">${mn}</span>`:""}</button>`;
     }
   }
   $("cal-grid").innerHTML=html;
-  $("cal-legend").innerHTML=cal.mode==="progress"?`<div class="legend"><span>集中した時間</span>${["1〜24分","25分〜","1時間〜","2時間〜"].map((l,i)=>`<span><i style="background:${i===3?"var(--accent)":`color-mix(in srgb, var(--accent) ${[16,34,58][i]}%, transparent)`}"></i>${l}</span>`).join("")}</div>`:"";
+  const hols=Object.entries(jpHolidays(y)).filter(([k])=>+k.slice(5,7)===m).sort(([a],[b])=>a.localeCompare(b));
+  const holLine=hols.length?`<p class="hol-line"><i></i>${hols.map(([k,n])=>`${+k.slice(8)}日 ${esc(n)}`).join("　")}</p>`:"";
+  $("cal-legend").innerHTML=holLine+(cal.mode==="progress"?`<div class="legend"><span>集中した時間</span>${["1〜24分","25分〜","1時間〜","2時間〜"].map((l,i)=>`<span><i style="background:${i===3?"var(--accent)":`color-mix(in srgb, var(--accent) ${[16,34,58][i]}%, transparent)`}"></i>${l}</span>`).join("")}</div>`:"");
   renderCalPanel(); renderCalSum();
 }
 function renderCalPanel(){
   const k=cal.sel, {m,d,date}=parseKey(k);
-  const title=`${m}月${d}日（${WD[date.getDay()]}）`;
+  const hn=holName(k), title=`${m}月${d}日（${WD[date.getDay()]}${hn?"・祝":""}）`;
   let h="";
   if(cal.mode==="plan"){
     const sh=state.shifts.filter(s=>s.date===k).sort((a,b)=>toMin(a.start)-toMin(b.start));
     const ev=state.events.filter(e=>e.date===k).sort((a,b)=>(a.start||"99").localeCompare(b.start||"99"));
-    h+=`<div class="panel-head"><h3>${title}</h3></div>`;
+    h+=`<div class="panel-head"><h3>${title}</h3>${hn?`<span class="hol-name">${esc(hn)}</span>`:""}</div>`;
     sh.forEach(s=>{ const j=jobById(s.jobId), t=typeById(s.typeId), c=calcShift(s);
       h+=`<button class="item" data-act="edit-shift" data-id="${s.id}"><span class="t">${fmtT(s.start)}–${fmtT(s.end)}</span>
         <span class="m"><span style="display:inline-flex;gap:6px;align-items:center"><i class="swatch" style="background:${j?j.color:JOB_COLORS[0]}"></i>${esc(j?j.name:"勤務先なし")}${t?` ・ ${esc(t.name)}`:""}</span><small>${hm(c.worked)}（休憩${Number(s.breakMin)||0}分）・時給${yen(c.wage)}</small></span>
@@ -1184,7 +1246,7 @@ function renderCalPanel(){
     h+=`<div class="actions"><button class="act" data-act="new-event">＋ 予定</button><button class="act" data-act="new-shift">＋ シフト</button><button class="act" data-act="si-open">表から入れる</button></div>`;
   } else {
     const p=progressOf(k);
-    h+=`<div class="panel-head"><h3>${title}</h3><span class="mono" style="font-size:13px;color:var(--ink-2)">${p.min}分 ・ ${p.pomos}ポモドーロ</span></div>`;
+    h+=`<div class="panel-head"><h3>${title}</h3><span class="mono" style="font-size:13px;color:var(--ink-2)">${hn?esc(hn)+" ・ ":""}${p.min}分 ・ ${p.pomos}ポモドーロ</span></div>`;
     if(!p.min&&!p.tasks.length&&!p.steps.length) h+=`<p class="empty" style="padding-block:12px">${k>dayKey(Date.now())?"まだ来ていない日です。":"この日の記録はありません。"}</p>`;
     p.tasks.forEach(t=>{ h+=`<div class="item"><span class="t">完了</span><span class="m">${esc(t.title)}</span></div>`; });
     p.steps.forEach(s=>{ h+=`<div class="item"><span class="t">一歩</span><span class="m">${esc(s.text)}<small>${esc(s.task)}</small></span></div>`; });
