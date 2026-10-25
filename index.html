@@ -210,6 +210,9 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .hol-line{display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; margin:10px 0 0; font-size:12px; color:var(--ink-2); line-height:1.7}
 .hol-line i{width:6px; height:6px; border-radius:50%; background:var(--sun); flex:none; align-self:center}
 .hol-name{font-size:12px; color:var(--sun)}
+.fx-row{display:flex; align-items:center; gap:10px; padding-block:12px; border-bottom:1px solid var(--line)}
+.fx-row .m{flex:1; min-width:0}
+.fx-row small{display:block; font-size:12px; color:var(--ink-3); margin-top:2px}
 .day.out{opacity:.35}
 .day.today .num{background:var(--ink); color:var(--bg)}
 .day.sel::before{content:""; position:absolute; inset:2px; border-radius:10px; background:var(--accent-soft)}
@@ -641,6 +644,26 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
   </form>
 </dialog>
 
+<dialog id="d-fixed" aria-labelledby="fx-t">
+  <div class="grab"></div>
+  <p class="sheet-title" id="fx-t">毎月の固定費</p>
+  <p class="sheet-sub">保険や家賃など、毎月決まって出ていくお金です。開始月から今月まで、毎月その日付で家計に自動で入ります。</p>
+  <div id="fx-list"></div>
+  <div class="frm" style="margin-top:16px">
+    <label for="fx-name">名前</label>
+    <input class="inp" type="text" id="fx-name" placeholder="例：保険" autocomplete="off">
+    <div class="two" style="margin-top:12px">
+      <div class="frm"><label for="fx-amount">金額（円）</label><input class="inp mono" type="number" inputmode="numeric" min="1" step="1" id="fx-amount" placeholder="10708"></div>
+      <div class="frm"><label for="fx-from">開始月</label><input class="inp" type="month" id="fx-from"></div>
+    </div>
+    <div class="two" style="margin-top:12px">
+      <div class="frm"><label for="fx-cat">カテゴリ</label><select class="inp" id="fx-cat"></select></div>
+      <div class="frm"><label for="fx-day">毎月何日</label><input class="inp mono" type="number" inputmode="numeric" min="1" max="28" id="fx-day" value="1"></div>
+    </div>
+    <div class="sheet-actions"><button type="button" class="done-btn" data-act="fx-add">追加する</button></div>
+  </div>
+</dialog>
+
 <dialog id="d-moimport" aria-labelledby="mi-t">
   <div class="grab"></div>
   <p class="sheet-title" id="mi-t">家計簿を取り込む</p>
@@ -783,6 +806,7 @@ function migrate(s){
   ["tasks","sessions","parking","events","jobs","shiftTypes","shifts"].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=[]; });
   if(!s.money||typeof s.money!=="object") s.money={budget:0,receipts:[]};
   if(!Array.isArray(s.money.receipts)) s.money.receipts=[];
+  if(!Array.isArray(s.money.fixed)) s.money.fixed=[];
   s.detox={goal:180,nudge:true,bedOn:false,bed:"23:00",len:30,...(s.detox&&typeof s.detox==="object"?s.detox:{})};
   ["placed","urges"].forEach(k=>{ if(!Array.isArray(s.detox[k])) s.detox[k]=[]; });
   if(!s.detox.session||typeof s.detox.session!=="object"||!s.detox.session.endAt) s.detox.session=null;
@@ -1527,12 +1551,56 @@ function budgetInfo(ym,total){
   const days=ym===thisYM()?last-n.getDate()+1:0;
   return {b,left,pct:total/b,days,perDay:days&&left>0?Math.floor(left/days):0};
 }
+// 毎月の固定費（保険・家賃など）。開始月から今月まで、月ごとに支出として自動で入れる。
+// 消したものは skip に覚えておき、開くたびに復活しないようにする
+function applyFixed(){
+  const cur=thisYM(), now=Date.now(); let changed=false;
+  state.money.fixed.forEach(f=>{
+    if(!/^\d{4}-\d{2}$/.test(f.from||"")||!(Number(f.amount)>0)) return;
+    for(let ym=f.from, n=0; ym<=cur&&n<600; ym=shiftYM(ym,1), n++){
+      const id="fx-"+f.id+"-"+ym;
+      if((f.skip||[]).includes(ym)||state.money.receipts.some(r=>r.id===id)) continue;
+      const [y,m]=ym.split("-").map(Number), d=Math.min(Math.max(1,Math.round(f.day)||1),new Date(y,m,0).getDate());
+      const items=[{name:f.name,price:Math.round(f.amount),category:f.category}];
+      state.money.receipts.push({id,date:ym+"-"+pad(d),store:f.name,items,total:sumItems(items),method:"fixed",fixedId:f.id,createdAt:now,updatedAt:now});
+      changed=true;
+    }
+  });
+  return changed;
+}
 function moneySummary(){
+  if(applyFixed()) save();
   const ym=thisYM(), st=monthStats(ym), bi=budgetInfo(ym,st.total);
   return {ym,total:st.total,count:st.rs.length,budget:bi?bi.b:0,left:bi?bi.left:0,days:bi?bi.days:0,perDay:bi?bi.perDay:0,
     cats:st.cats.slice(0,3).map(([c,v])=>[c,v,catColor(c)])};
 }
+function renderFixed(){
+  const fx=state.money.fixed;
+  $("fx-list").innerHTML=fx.length?fx.map(f=>{ const [y,m]=f.from.split("-").map(Number);
+    return `<div class="fx-row"><span class="m"><b>${esc(f.name)}</b><small>${y}年${m}月から 毎月${Math.round(f.day)||1}日 ・ ${esc(f.category)}</small></span><span class="mono">${yenS(f.amount)}</span><button class="mini" data-act="fx-del" data-id="${esc(f.id)}">削除</button></div>`; }).join("")
+    :`<p class="empty" style="padding-block:6px">まだありません。</p>`;
+}
+function openFixed(){
+  $("fx-cat").innerHTML=CATS.map(c=>`<option>${esc(c)}</option>`).join("");
+  $("fx-cat").value="その他"; $("fx-name").value=""; $("fx-amount").value=""; $("fx-day").value="1";
+  // 開始月の初期値は、記録のいちばん古い月（「最初から」入れたいときにそのまま使える）
+  const months=state.money.receipts.map(r=>(r.date||"").slice(0,7)).filter(Boolean).sort();
+  $("fx-from").value=months[0]||thisYM();
+  renderFixed(); openSheet("d-fixed");
+}
+function addFixed(){
+  const name=$("fx-name").value.trim()||"固定費", amount=Math.round(Number($("fx-amount").value)), from=$("fx-from").value;
+  if(!(amount>0)){ toast("金額を入れてください。"); return; }
+  if(!/^\d{4}-\d{2}$/.test(from)){ toast("開始月を入れてください。"); return; }
+  const day=Math.min(28,Math.max(1,Math.round(Number($("fx-day").value))||1));
+  const before=state.money.receipts.length;
+  state.money.fixed.push({id:uid(),name,amount,category:CATS.includes($("fx-cat").value)?$("fx-cat").value:"その他",from,day,skip:[]});
+  applyFixed(); save(); renderFixed(); renderMoney();
+  $("fx-name").value=""; $("fx-amount").value="";
+  toast(`「${name}」を入れました（${state.money.receipts.length-before}か月分）。`);
+}
 function renderMoney(){
+  if(applyFixed()) save();
   const ym=money.ym, [y,m]=ym.split("-").map(Number), cur=ym===thisYM();
   const {rs,total,cats}=monthStats(ym), prev=monthStats(shiftYM(ym,-1)).total, bi=budgetInfo(ym,total);
   let budget;
@@ -1554,7 +1622,7 @@ function renderMoney(){
     return `<div class="kb-day"><span>${p.m}月${p.d}日（${WD[p.date.getDay()]}）</span><span class="mono">${yenS(g.reduce((a,r)=>a+sumItems(r.items),0))}</span></div>`+
       g.map(r=>{ const cs=[...new Set((r.items||[]).map(i=>i.category))];
         return `<button class="kb-row" data-act="rc-open" data-id="${esc(r.id)}"><b>${esc(r.store)}</b><span class="mono">${yenS(sumItems(r.items))}</span>
-          <small>${r.needsReview?'<span class="kb-flag">要確認</span>':""}${cs.map(c=>`<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join("")}<span>${(r.items||[]).length}品目</span></small></button>`; }).join("");
+          <small>${r.needsReview?'<span class="kb-flag">要確認</span>':""}${r.fixedId?"<span>毎月</span>":""}${cs.map(c=>`<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join("")}<span>${(r.items||[]).length}品目</span></small></button>`; }).join("");
   }).join(""):`<p class="empty">この月の記録はまだありません。「手入力」で入れるか、claude.ai の家計簿のデータは「家計簿を取り込む」で入れます。</p>`;
   $("money").innerHTML=`
     <div class="kb-top">
@@ -1573,7 +1641,7 @@ function renderMoney(){
         ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から</button><button class="act" data-act="rc-new">＋ 手入力</button>`
         :`<button class="act primary" data-act="rc-new">＋ 手入力</button><a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>`}
     </div>
-    <div class="kb-more"><button class="kb-link" data-act="mo-import">家計簿を取り込む</button>${rs.length?'<button class="kb-link" data-act="mo-csv">CSVで書き出す</button>':""}</div>
+    <div class="kb-more"><button class="kb-link" data-act="fx-open">毎月の固定費</button><button class="kb-link" data-act="mo-import">家計簿を取り込む</button>${rs.length?'<button class="kb-link" data-act="mo-csv">CSVで書き出す</button>':""}</div>
     ${list}`;
   const bi2=$("budget-input"); if(bi2) bi2.focus();
 }
@@ -1740,8 +1808,8 @@ window.__receiptScanned=function(js){
 function importMoneyText(text){
   try{
     const d=JSON.parse(String(text).trim());
-    const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:null; if(!list) throw 0;
-    let add=0, upd=0, last="";
+    const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:d&&Array.isArray(d.fixed)?[]:null; if(!list) throw 0;
+    let add=0, upd=0, last="", fxn=0;
     list.forEach(x=>{
       if(!x||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")||!Array.isArray(x.items)) return;
       if(x.date>last) last=x.date;
@@ -1754,9 +1822,20 @@ function importMoneyText(text){
       else if((state.money.receipts[i].updatedAt||0)<=r.updatedAt){ state.money.receipts[i]=r; upd++; }
     });
     if(d&&!Array.isArray(d)&&Number(d.budget)>0&&!state.money.budget) state.money.budget=Number(d.budget);
+    // 毎月の固定費（保険など）。同じ id は設定を上書きするので、何度入れても重ならない
+    if(d&&!Array.isArray(d)&&Array.isArray(d.fixed)) d.fixed.forEach(x=>{
+      if(!x||!x.name||!(Number(x.amount)>0)||!/^\d{4}-\d{2}$/.test(x.from||"")) return;
+      const f={id:"im-"+String(x.id||x.name),name:String(x.name),amount:Math.round(Number(x.amount)),category:CATS.includes(x.category)?x.category:"その他",
+        from:x.from,day:Math.min(28,Math.max(1,Math.round(Number(x.day))||1))};
+      const i=state.money.fixed.findIndex(y=>y.id===f.id);
+      if(i<0){ state.money.fixed.push({...f,skip:[]}); fxn++; } else Object.assign(state.money.fixed[i],f);
+    });
+    const before=state.money.receipts.length; applyFixed(); const gen=state.money.receipts.length-before;
+    if(!last&&gen) last=thisYM()+"-01";
     if(last){ money.ym=last.slice(0,7)>thisYM()?thisYM():last.slice(0,7); money.editBudget=false; }
     save(); renderMoney();
-    toast(add+upd?`取り込みました（新しく${add}件・更新${upd}件）。${Number(money.ym.slice(5))}月を表示しています。`:"取り込める記録がありませんでした。"); return true;
+    const parts=[]; if(add+upd) parts.push(`記録 新しく${add}件・更新${upd}件`); if(fxn||gen) parts.push(`毎月の固定費 ${fxn}件（${gen}か月分）`);
+    toast(parts.length?`取り込みました（${parts.join("、")}）。${Number(money.ym.slice(5))}月を表示しています。`:"取り込める記録がありませんでした。"); return true;
   }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったデータを入れてください。"); return false; }
 }
 $("money-file").addEventListener("change",async e=>{
@@ -2148,7 +2227,13 @@ document.addEventListener("click",e=>{
     case "rc-add-item": if(draft){ draft.items.push(blankItem()); renderReceipt(); const n=document.querySelectorAll('#rc-body [data-rk="name"]'); if(n.length) n[n.length-1].focus(); } break;
     case "rc-del-item": if(draft){ draft.items.splice(Number(b.dataset.i),1); if(!draft.items.length) draft.items.push(blankItem()); renderReceipt(); } break;
     case "rc-save": saveReceipt(); break;
-    case "rc-del": if(draft&&armBtn(b)){ state.money.receipts=state.money.receipts.filter(x=>x.id!==draft.id); draft=null; save(); closeSheet("d-receipt"); renderMoney(); toast("削除しました。"); } break;
+    case "fx-open": openFixed(); break;
+    case "fx-add": addFixed(); break;
+    case "fx-del": if(armBtn(b)){ const id=b.dataset.id; state.money.fixed=state.money.fixed.filter(f=>f.id!==id);
+      state.money.receipts=state.money.receipts.filter(r=>r.fixedId!==id); save(); renderFixed(); renderMoney(); toast("固定費をやめました。入っていた分も消しました。"); } break;
+    case "rc-del": if(draft&&armBtn(b)){
+      if(draft.fixedId){ const f=state.money.fixed.find(x=>x.id===draft.fixedId); if(f) (f.skip=f.skip||[]).push(draft.id.slice(-7)); }
+      state.money.receipts=state.money.receipts.filter(x=>x.id!==draft.id); draft=null; save(); closeSheet("d-receipt"); renderMoney(); toast("削除しました。"); } break;
     case "del-type": if(armBtn(b)){ const tid=$("t-id").value; state.shiftTypes=state.shiftTypes.filter(x=>x.id!==tid); state.shifts.forEach(s=>{ if(s.typeId===tid) s.typeId=null; }); if(cal.stamp===tid) cal.stamp=null; save(); openJobs(); toast("パターンを削除しました。入れたシフトは残ります。"); } break;
   }
 });
