@@ -210,6 +210,15 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .hol-line{display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; margin:10px 0 0; font-size:12px; color:var(--ink-2); line-height:1.7}
 .hol-line i{width:6px; height:6px; border-radius:50%; background:var(--sun); flex:none; align-self:center}
 .hol-name{font-size:12px; color:var(--sun)}
+#bt-list{max-height:52vh; overflow:auto}
+.bt-row{display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; width:100%; padding-block:12px; border-bottom:1px solid var(--line); text-align:left}
+.bt-row:disabled{opacity:.5}
+.bt-ck{width:20px; height:20px; border-radius:6px; border:1.5px solid var(--ink-3); display:grid; place-items:center}
+.bt-row[aria-pressed="true"] .bt-ck{background:var(--accent); border-color:var(--accent)}
+.bt-row[aria-pressed="true"] .bt-ck::after{content:""; width:5px; height:9px; border:solid var(--bg); border-width:0 2px 2px 0; transform:rotate(45deg) translate(-1px,-1px)}
+.bt-m b{display:block; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.bt-m small{display:block; font-size:12px; color:var(--ink-3); margin-top:2px}
+.bt-row.warn .bt-m small{color:var(--danger)}
 .fx-row{display:flex; align-items:center; gap:10px; padding-block:12px; border-bottom:1px solid var(--line)}
 .fx-row .m{flex:1; min-width:0}
 .fx-row small{display:block; font-size:12px; color:var(--ink-3); margin-top:2px}
@@ -642,6 +651,14 @@ select.inp{appearance:none; -webkit-appearance:none; background-image:linear-gra
       <button type="submit" class="done-btn">保存</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="d-batch" aria-labelledby="bt-t">
+  <div class="grab"></div>
+  <p class="sheet-title" id="bt-t">レシートをまとめて読み取り</p>
+  <p class="sheet-sub" id="bt-sub"></p>
+  <div id="bt-list"></div>
+  <div class="sheet-actions"><button type="button" class="done-btn" data-act="bt-save" id="bt-save" disabled>読み取り中…</button></div>
 </dialog>
 
 <dialog id="d-fixed" aria-labelledby="fx-t">
@@ -1638,7 +1655,7 @@ function renderMoney(){
     ${budget}${catHtml}
     <div class="kb-actions">
       ${native()&&native().scanReceipt
-        ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から</button><button class="act" data-act="rc-new">＋ 手入力</button>`
+        ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から（複数可）</button><button class="act" data-act="rc-new">＋ 手入力</button>`
         :`<button class="act primary" data-act="rc-new">＋ 手入力</button><a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>`}
     </div>
     <div class="kb-more"><button class="kb-link" data-act="fx-open">毎月の固定費</button><button class="kb-link" data-act="mo-import">家計簿を取り込む</button>${rs.length?'<button class="kb-link" data-act="mo-csv">CSVで書き出す</button>':""}</div>
@@ -1804,6 +1821,52 @@ window.__receiptScanned=function(js){
   else { draft.needsReview=true; draft.reviewNote=p.total!=null?"読み取りました。合計は合っています。品名と金額を、レシートと見比べて保存してください。":"読み取りました。レシートの合計が見つからなかったので、金額をレシートと見比べてください。"; }
   renderReceipt(); openSheet("d-receipt");
 };
+/* ---------- 複数枚をまとめて読み取る（アプリ版：「写真から」で複数選ぶ） ----------
+   アプリが1枚ずつ読み取って __receiptBatch('item') で渡してくる。全部そろったら一覧で確認し、選んだものをまとめて保存する。
+   合計が合うものはそのまま、合わないものは「要確認」を付けて保存する。同じ日・同じ金額の記録があるものは、初期状態では外しておく */
+let rcBatch=null;
+function rcDraft(r){
+  const p=r&&r.ok?parseReceipt(r.lines||[]):null;
+  if(!p||!p.items.length) return {status:"fail",checked:false,store:"",date:dayKey(Date.now()),items:[],sum:0,note:"読み取れませんでした"};
+  const d={status:"ok",checked:true,store:p.store||"",date:p.date||dayKey(Date.now()),items:p.items}, s=sumItems(d.items);
+  d.sum=s;
+  if(!p.date){ d.status="review"; d.note="日付が読み取れませんでした（今日の日付にしています）"; }
+  else if(p.total==null){ d.status="review"; d.note="レシートの合計が見つかりませんでした"; }
+  else if(s!==p.total){ d.status="review"; d.note=`品目の合計 ${yenS(s)} が、レシートの ${yenS(p.total)} と違います`; }
+  else d.note="合計が合っています";
+  if(state.money.receipts.some(x=>x.date===d.date&&sumItems(x.items)===s)){ d.dup=true; d.checked=false; d.note="同じ日・同じ金額の記録があります"; }
+  return d;
+}
+function renderBatch(){
+  const b=rcBatch; if(!b) return;
+  const reading=!b.done, k=b.items.filter(d=>d&&d.checked).length, bad=b.items.filter(d=>d&&d.status==="fail").length;
+  $("bt-sub").textContent=reading?`読み取っています… ${b.at||0}/${b.n}枚`
+    :`${b.n}枚を読み取りました。保存するものを選んでください。${bad?`（${bad}枚は読み取れませんでした）`:""}`;
+  $("bt-list").innerHTML=b.items.map((d,i)=>{ if(!d) return ""; const p=parseKey(d.date), fail=d.status==="fail";
+    return `<button class="bt-row${d.status==="review"||d.dup?" warn":""}" data-act="bt-toggle" data-i="${i}" aria-pressed="${!!d.checked}"${fail?" disabled":""}>
+      <span class="bt-ck"></span><span class="bt-m"><b>${esc(d.store||(fail?`${i+1}枚目`:"（店名なし）"))}</b><small>${fail?"":`${p.m}/${p.d} ・ ${d.items.length}品目 ・ `}${esc(d.note)}</small></span>
+      <span class="mono">${fail?"":yenS(d.sum)}</span></button>`; }).join("");
+  const btn=$("bt-save"); btn.disabled=reading||!k; btn.textContent=reading?"読み取り中…":k?`選んだ${k}枚を保存`:"保存するものを選んでください";
+}
+window.__receiptBatch=function(kind,a,b){
+  if(kind==="start"){ rcBatch={n:a,items:[],done:false,at:0}; if(view!=="money") setView("money"); renderBatch(); openSheet("d-batch"); return; }
+  if(!rcBatch) return;
+  if(kind==="progress") rcBatch.at=a;
+  else if(kind==="item"){ let r; try{ r=typeof b==="string"?JSON.parse(b):b; }catch(e){ r=null; } rcBatch.items[a]=rcDraft(r); }
+  else if(kind==="end"){ rcBatch.done=true; if(!$("d-batch").open) openSheet("d-batch"); }
+  renderBatch();
+};
+function saveBatch(){
+  const b=rcBatch; if(!b) return; const now=Date.now(); let n=0, last="";
+  b.items.forEach(d=>{ if(!d||!d.checked||!d.items.length) return;
+    const items=d.items.map(it=>({name:String(it.name||"").trim()||"品目",price:Math.round(Number(it.price)||0),category:CATS.includes(it.category)?it.category:"その他"}));
+    const r={id:"ct"+uid(),date:d.date,store:String(d.store||"").trim()||"（店名なし）",items,total:sumItems(items),method:"scan",createdAt:now+n,updatedAt:now+n};
+    if(d.status==="review"){ r.needsReview=true; r.reviewNote=d.note; }
+    state.money.receipts.push(r); n++; if(r.date>last) last=r.date; });
+  rcBatch=null; closeSheet("d-batch");
+  if(last) money.ym=last.slice(0,7)>thisYM()?thisYM():last.slice(0,7);
+  save(); renderMoney(); toast(`${n}件を家計に入れました。`);
+}
 // claude.ai の家計簿から書き出したファイルを取り込む。同じレシートは上書きするので、何度取り込んでも重ならない
 function importMoneyText(text){
   try{
@@ -2227,6 +2290,8 @@ document.addEventListener("click",e=>{
     case "rc-add-item": if(draft){ draft.items.push(blankItem()); renderReceipt(); const n=document.querySelectorAll('#rc-body [data-rk="name"]'); if(n.length) n[n.length-1].focus(); } break;
     case "rc-del-item": if(draft){ draft.items.splice(Number(b.dataset.i),1); if(!draft.items.length) draft.items.push(blankItem()); renderReceipt(); } break;
     case "rc-save": saveReceipt(); break;
+    case "bt-toggle": if(rcBatch){ const d=rcBatch.items[+b.dataset.i]; if(d&&d.status!=="fail"){ d.checked=!d.checked; renderBatch(); } } break;
+    case "bt-save": saveBatch(); break;
     case "fx-open": openFixed(); break;
     case "fx-add": addFixed(); break;
     case "fx-del": if(armBtn(b)){ const id=b.dataset.id; state.money.fixed=state.money.fixed.filter(f=>f.id!==id);
