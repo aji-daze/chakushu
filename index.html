@@ -300,8 +300,8 @@ button{cursor:pointer; background:none; border:0; padding:0; touch-action:manipu
 .kb-bar i{display:block; height:100%; border-radius:3px}
 .kb-cat .mono{font-size:12px; text-align:right; min-width:6em}
 .kb-cat small{color:var(--ink-3); margin-left:4px}
-.kb-actions{display:flex; gap:8px; padding-block:22px 4px}
-.kb-actions .act{flex:1 1 0; min-width:0; justify-content:center; text-align:center; padding-inline:8px; white-space:nowrap}
+.kb-actions{display:flex; flex-wrap:wrap; gap:8px; padding-block:22px 4px}
+.kb-actions .act{flex:1 1 auto; min-width:max-content; justify-content:center; text-align:center; padding-inline:14px; white-space:nowrap}
 .kb-actions a.act{text-decoration:none; display:inline-flex; align-items:center}
 .kb-more{display:flex; gap:18px; padding-block:2px 6px; border-bottom:1px solid var(--line)}
 .kb-diff{font-size:12px; color:var(--ink-2); margin:6px 0 0; line-height:1.7}
@@ -1655,7 +1655,7 @@ function renderMoney(){
     ${budget}${catHtml}
     <div class="kb-actions">
       ${native()&&native().scanReceipt
-        ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から（複数可）</button><button class="act" data-act="rc-new">＋ 手入力</button>`
+        ?`<button class="act primary" data-act="rc-scan" data-v="camera">レシートを撮る</button><button class="act" data-act="rc-scan" data-v="pick">写真から</button><button class="act" data-act="rc-new">＋ 手入力</button>`
         :`<button class="act primary" data-act="rc-new">＋ 手入力</button><a class="act" href="${KAKEIBO_URL}" target="_blank" rel="noopener">レシートを撮る</a>`}
     </div>
     <div class="kb-more"><button class="kb-link" data-act="fx-open">毎月の固定費</button><button class="kb-link" data-act="mo-import">家計簿を取り込む</button>${rs.length?'<button class="kb-link" data-act="mo-csv">CSVで書き出す</button>':""}</div>
