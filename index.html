@@ -1938,7 +1938,7 @@ function importMoneyText(text){
   try{
     const d=JSON.parse(String(text).trim());
     const list=Array.isArray(d)?d:d&&Array.isArray(d.receipts)?d.receipts:d&&Array.isArray(d.fixed)?[]:null; if(!list) throw 0;
-    let add=0, upd=0, last="", fxn=0;
+    let add=0, upd=0, last="", fxn=0, dup=0;
     list.forEach(x=>{
       if(!x||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")||!Array.isArray(x.items)) return;
       if(x.date>last) last=x.date;
@@ -1947,7 +1947,10 @@ function importMoneyText(text){
         createdAt:Number(x.createdAt)||Date.now(),updatedAt:Number(x.updatedAt)||Date.now()};
       if(x.needsReview){ r.needsReview=true; if(x.reviewNote) r.reviewNote=String(x.reviewNote); }
       const i=state.money.receipts.findIndex(y=>y.id===id);
-      if(i<0){ state.money.receipts.push(r); add++; }
+      if(i<0){
+        // 別の経路で同じレシートがすでに入っている（同じ日・同じ合計・同じ店）ときは、重ねずにスルーする
+        if(state.money.receipts.some(y=>y.date===r.date&&sumItems(y.items)===r.total&&String(y.store).slice(0,3)===r.store.slice(0,3))){ dup++; return; }
+        state.money.receipts.push(r); add++; }
       else if((state.money.receipts[i].updatedAt||0)<=r.updatedAt){ state.money.receipts[i]=r; upd++; }
     });
     if(d&&!Array.isArray(d)&&Number(d.budget)>0&&!state.money.budget) state.money.budget=Number(d.budget);
@@ -1963,7 +1966,7 @@ function importMoneyText(text){
     if(!last&&gen) last=thisYM()+"-01";
     if(last){ money.ym=last.slice(0,7)>thisYM()?thisYM():last.slice(0,7); money.editBudget=false; }
     save(); renderMoney();
-    const parts=[]; if(add+upd) parts.push(`記録 新しく${add}件・更新${upd}件`); if(fxn||gen) parts.push(`毎月の固定費 ${fxn}件（${gen}か月分）`);
+    const parts=[]; if(add+upd) parts.push(`記録 新しく${add}件・更新${upd}件`); if(dup) parts.push(`被り${dup}件はスルー`); if(fxn||gen) parts.push(`毎月の固定費 ${fxn}件（${gen}か月分）`);
     toast(parts.length?`取り込みました（${parts.join("、")}）。${Number(money.ym.slice(5))}月を表示しています。`:"取り込める記録がありませんでした。"); return true;
   }catch(err){ toast("読み込めませんでした。家計簿の「ConTodo用に書き出す」で作ったデータを入れてください。"); return false; }
 }
